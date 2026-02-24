@@ -124,7 +124,7 @@ module.exports = MyNewDevice;
 
 4. 點 Deploy，等幾分鐘就會拿到雲端網址：
    ```
-   https://exhibitionserver-do4f.onrender.com
+   https://exhibitionserver.onrender.com
    ```
 
 ### 步驟二：在展場電腦執行 Bridge
@@ -132,12 +132,12 @@ module.exports = MyNewDevice;
 在展場電腦上執行：
 ```bash
 cd ExhibitionServer
-node src/bridge.js --server wss://exhibitionserver-do4f.onrender.com --secret exhibition2026
+node src/bridge.js --server wss://exhibitionserver.onrender.com --secret exhibition2026
 ```
 
 或用環境變數：
 ```bash
-set BRIDGE_SERVER=wss://exhibitionserver-do4f.onrender.com
+set BRIDGE_SERVER=wss://exhibitionserver.onrender.com
 set BRIDGE_SECRET=exhibition2026
 npm run bridge
 ```
@@ -152,7 +152,7 @@ Bridge 會自動：
 
 組員打開瀏覽器，輸入雲端網址即可操控：
 ```
-https://exhibitionserver-do4f.onrender.com
+https://exhibitionserver.onrender.com
 ```
 
 > **注意**：Render 免費方案在 15 分鐘無流量後會休眠，首次訪問可能需等 30 秒喚醒。
