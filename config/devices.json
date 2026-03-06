@@ -15,8 +15,8 @@
       "id": "esp32_main",
       "type": "ESP32Device",
       "config": {
-        "ip": "192.168.4.1",
-        "timeout": 200,
+        "ip": "172.20.10.3",
+        "timeout": 2000,
         "throttleMs": 100
       }
     },

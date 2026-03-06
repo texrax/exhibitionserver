@@ -31,7 +31,10 @@ class EventBus extends EventEmitter {
       this._history.shift();
     }
 
-    console.log(`[EventBus] ${event}`, JSON.stringify(data).substring(0, 120));
+    // ⚡ 加上消音器：只要事件名稱不包含 ':status'，才印到 PowerShell 畫面上
+    if (!event.includes(':status')) {
+      console.log(`[EventBus] ${event}`, JSON.stringify(data).substring(0, 120));
+    }
 
     // 通知所有本地監聽者
     this.emit(event, data);
