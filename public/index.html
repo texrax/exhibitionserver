@@ -392,18 +392,27 @@
           <button class="vts-btn" onclick="vtsExpression('哀傷.exp3.json')">哀傷</button>
           <button class="vts-btn" onclick="vtsExpression('開心(睜眼).exp3.json')">開心(睜眼)</button>
           <button class="vts-btn" onclick="vtsExpression('開心(閉眼).exp3.json')">開心(閉眼)</button>
-          <button class="vts-btn" onclick="vtsExpression('更換衣服.exp3.json')">更換衣服</button>
-          <button class="vts-btn" onclick="vtsExpression('吃飯手開關.exp3.json')">吃飯手開關</button>
+          <button class="vts-btn" onclick="vtsHotkey('更換衣服')">更換衣服</button>
+          <button class="vts-btn" onclick="vtsHotkey('吃飯手開關')">吃飯手開關</button>
         </div>
       </div>
 
       <div class="vts-section">
         <h4>Animations</h4>
         <div class="vts-btn-group">
-          <button class="vts-btn" onclick="vtsHotkey('播放動畫(吃飯)')">吃飯</button>
+          <button class="vts-btn" onclick="vtsHotkey('播放動畫(吃青菜)')">吃青菜</button>
+          <button class="vts-btn" onclick="vtsHotkey('播放動畫(吃丸子)')">吃丸子</button>
           <button class="vts-btn" onclick="vtsHotkey('播放動畫(不吃)')">不吃</button>
           <button class="vts-btn" onclick="vtsHotkey('播放動畫(待機)')">待機</button>
-          <button class="vts-btn" onclick="vtsHotkey('取消動作')">取消動作</button>
+        </div>
+      </div>
+
+      <div class="vts-section">
+        <h4>Utilities</h4>
+        <div class="vts-btn-group">
+          <button class="vts-btn" onclick="vtsRemoveAllExpressions()" style="border-color:var(--orange)">移除表情</button>
+          <button class="vts-btn" onclick="vtsHotkey('回歸原點')">回歸原點</button>
+          <button class="vts-btn" onclick="vtsHotkey('模型重新加載')" style="border-color:var(--red)">模型重新加載</button>
         </div>
       </div>
 

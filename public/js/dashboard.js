@@ -200,6 +200,10 @@
     executeDevice("vtubestudio", "triggerHotkey", { name });
   };
 
+  window.vtsRemoveAllExpressions = function () {
+    executeDevice("vtubestudio", "removeAllExpressions", { fadeTime: 0.25 });
+  };
+
   window.vtsMoveModel = function () {
     const positionX = parseFloat(document.getElementById("vtsPosX").value) || 0;
     const positionY = parseFloat(document.getElementById("vtsPosY").value) || 0;

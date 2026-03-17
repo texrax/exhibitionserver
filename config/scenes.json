@@ -15,7 +15,7 @@
   "play_day_1": {
     "description": "星期一 — 吃飯動畫 + 紅色閃爍",
     "actions": [
-      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "吃飯手開關.exp3.json", "active": true } },
+      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃飯手開關" } },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "random_blocks", "color": { "r": 255, "g": 130, "b": 130 } } },
       { "device": "audio", "action": "play", "params": { "file": "星期一.wav" } }
     ]
@@ -104,12 +104,28 @@
     ]
   },
 
-  "vts_eat": {
-    "description": "VTS 吃飯動畫",
+  "vts_eat_vegetable": {
+    "description": "VTS 吃青菜動畫",
     "actions": [
-      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "吃飯手開關.exp3.json", "active": true } },
+      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃飯手開關" } },
       { "delay": 200 },
-      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "播放動畫(吃飯)" } }
+      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "播放動畫(吃青菜)" } }
+    ]
+  },
+
+  "vts_eat_meatball": {
+    "description": "VTS 吃丸子動畫",
+    "actions": [
+      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃飯手開關" } },
+      { "delay": 200 },
+      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "播放動畫(吃丸子)" } }
+    ]
+  },
+
+  "vts_not_eat": {
+    "description": "VTS 不吃動畫",
+    "actions": [
+      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "播放動畫(不吃)" } }
     ]
   },
 
@@ -117,6 +133,27 @@
     "description": "VTS 待機動畫",
     "actions": [
       { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "播放動畫(待機)" } }
+    ]
+  },
+
+  "vts_remove_expression": {
+    "description": "VTS 移除所有表情",
+    "actions": [
+      { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.25 } }
+    ]
+  },
+
+  "vts_reset_position": {
+    "description": "VTS 回歸原點",
+    "actions": [
+      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "回歸原點" } }
+    ]
+  },
+
+  "vts_reload_model": {
+    "description": "VTS 模型重新加載",
+    "actions": [
+      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "模型重新加載" } }
     ]
   },
 

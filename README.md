@@ -11,7 +11,7 @@
 
 ```bash
 cd ExhibitionServer
-npm install
+pnpm install
 npm start
 ```
 
@@ -162,3 +162,33 @@ https://exhibitionserver.onrender.com
 1. 確認 VTube Studio 已開啟並啟用 API（設定 → Allow Plugin API access）
 2. 啟動本伺服器後，VTS 會跳出授權彈窗，點選「Allow」
 3. Token 會自動儲存於 `config/vts_token.txt`，後續免再授權
+
+## VTube Studio 熱鍵映射
+
+目前模型使用以下 VTS 熱鍵：
+
+| 熱鍵 | 名稱 | 功能 |
+|------|------|------|
+| N1 | 驚訝 | 表情 |
+| N2 | 生氣 | 表情 |
+| N3 | 哀傷 | 表情 |
+| N4 | 開心(睜眼) | 表情 |
+| N5 | 開心(閉眼) | 表情 |
+| N6 | 更換衣服 | 表情 toggle |
+| N7 | 吃飯手開關 | 表情 toggle |
+| N8 | 播放動畫(吃青菜) | 動畫 |
+| N9 | 播放動畫(吃丸子) | 動畫 |
+| N0 | 播放動畫(不吃) | 動畫 |
+| F1 | 播放動畫(待機) | 動畫 |
+| F2 | 移除表情 | 工具 |
+| F3 | 回歸原點 | 工具 |
+| F4 | 模型重新加載 | 工具 |
+
+### 表情自動互斥
+
+系統內建表情自動互斥邏輯：透過 `setExpression` 啟用新表情時，會自動關閉先前所有活躍表情，避免表情堆疊。
+也可透過 Dashboard 的「移除表情」按鈕或 `removeAllExpressions` action 手動清除所有活躍表情。
+
+### 動畫自動取消
+
+播放新動畫（名稱以「播放動畫」開頭的熱鍵）時，系統會自動先觸發「取消動作」熱鍵清除上一個動畫。

@@ -23,6 +23,7 @@ class VTubeStudioDevice extends BaseDevice {
     this._pendingRequests = new Map(); // requestID → { resolve, reject, timer }
     this._reconnectTimer = null;
     this._requestTimeout = config.requestTimeout || 10000;
+    this._activeExpressions = new Set(); // 追蹤目前啟用的表情檔案名稱
   }
 
   async init() {
@@ -48,6 +49,8 @@ class VTubeStudioDevice extends BaseDevice {
         return this._loadModel(params.modelID);
       case "injectParameter":
         return this._injectParameter(params.parameterValues, params.faceFound, params.mode);
+      case "removeAllExpressions":
+        return this._removeAllExpressions(params.fadeTime);
       case "getModelInfo":
         return this._getCurrentModel();
       case "getHotkeys":
@@ -73,6 +76,7 @@ class VTubeStudioDevice extends BaseDevice {
       { action: "moveModel", params: { timeInSeconds: "number", positionX: "number", positionY: "number", rotation: "number", size: "number" }, description: "移動模型" },
       { action: "setExpression", params: { file: "string", active: "boolean", fadeTime: "number" }, description: "啟用/停用表情" },
       { action: "tintArtMesh", params: { colorTint: "object", artMeshMatcher: "object" }, description: "ArtMesh 染色" },
+      { action: "removeAllExpressions", params: { fadeTime: "number" }, description: "移除所有活躍表情" },
       { action: "loadModel", params: { modelID: "string" }, description: "載入模型" },
       { action: "injectParameter", params: { parameterValues: "array" }, description: "注入追蹤參數" },
       { action: "getModelInfo", params: {}, description: "取得目前模型資訊" },
@@ -90,6 +94,7 @@ class VTubeStudioDevice extends BaseDevice {
       ...super.getStatus(),
       authenticated: this._authenticated,
       wsConnected: this._ws?.readyState === WebSocket.OPEN,
+      activeExpressions: [...this._activeExpressions],
     };
   }
 
@@ -132,12 +137,15 @@ class VTubeStudioDevice extends BaseDevice {
         try {
           const msg = JSON.parse(raw.toString());
           this._handleResponse(msg);
-        } catch {}
+        } catch (err) {
+          console.error(`[${this.id}] WebSocket 訊息解析失敗:`, err.message);
+        }
       });
 
       this._ws.on("close", () => {
         console.log(`[${this.id}] WebSocket 已斷線`);
         this._authenticated = false;
+        this._activeExpressions.clear();
         this._setStatus("offline");
         this._rejectAllPending("WebSocket 連線中斷");
         this._scheduleReconnect();
@@ -183,10 +191,6 @@ class VTubeStudioDevice extends BaseDevice {
       pluginDeveloper: this.pluginDeveloper,
     });
 
-    if (tokenResult.messageType === "APIError") {
-      throw new Error(tokenResult.data?.message || "Token 請求被拒絕");
-    }
-
     this._token = tokenResult.data.authenticationToken;
     this._saveToken();
 
@@ -211,6 +215,15 @@ class VTubeStudioDevice extends BaseDevice {
   // ==================================================
 
   async _triggerHotkey(hotkeyID) {
+    // 播放新動畫前自動取消上一個動畫
+    if (typeof hotkeyID === "string" && hotkeyID.startsWith("播放動畫")) {
+      try {
+        await this._sendRequest("HotkeyTriggerRequest", { hotkeyID: "取消動作" });
+      } catch (err) {
+        console.error(`[${this.id}] 自動取消動作失敗:`, err.message);
+      }
+    }
+
     const result = await this._sendRequest("HotkeyTriggerRequest", { hotkeyID });
     this.eventBus.publish(`${this.id}:hotkeyTriggered`, { hotkeyID });
     return result.data;
@@ -232,13 +245,74 @@ class VTubeStudioDevice extends BaseDevice {
   }
 
   async _setExpression(expressionFile, active = true, fadeTime = 0.25) {
+    // 啟用新表情前，先關閉所有已啟用的表情（自動互斥）
+    if (active && this._activeExpressions.size > 0) {
+      const deactivations = [...this._activeExpressions].map((file) =>
+        this._sendRequest("ExpressionActivationRequest", {
+          expressionFile: file,
+          active: false,
+          fadeTime,
+        }).catch((err) => {
+          console.error(`[${this.id}] 關閉表情 "${file}" 失敗:`, err.message);
+        })
+      );
+      await Promise.allSettled(deactivations);
+      this._activeExpressions.clear();
+    }
+
     const result = await this._sendRequest("ExpressionActivationRequest", {
       expressionFile,
       active,
       fadeTime,
     });
-    this.eventBus.publish(`${this.id}:expressionChanged`, { expressionFile, active });
+
+    if (active) {
+      this._activeExpressions.add(expressionFile);
+    } else {
+      this._activeExpressions.delete(expressionFile);
+    }
+
+    this.eventBus.publish(`${this.id}:expressionChanged`, {
+      expressionFile,
+      active,
+      activeExpressions: [...this._activeExpressions],
+    });
     return result.data;
+  }
+
+  async _removeAllExpressions(fadeTime = 0.25) {
+    // 查詢 VTS 實際活躍的表情（不依賴本地追蹤）
+    let expressionsToDeactivate = [];
+    try {
+      const stateResult = await this._sendRequest("ExpressionStateRequest", { details: true });
+      const expressions = stateResult.data?.expressions || [];
+      expressionsToDeactivate = expressions.filter((exp) => exp.active).map((exp) => exp.file);
+    } catch (err) {
+      console.error(`[${this.id}] 查詢表情狀態失敗，改用本地追蹤:`, err.message);
+      expressionsToDeactivate = [...this._activeExpressions];
+    }
+
+    // 合併本地追蹤（以防查詢遺漏）
+    const allToDeactivate = new Set([...expressionsToDeactivate, ...this._activeExpressions]);
+
+    if (allToDeactivate.size === 0) {
+      return { deactivated: [] };
+    }
+
+    const deactivations = [...allToDeactivate].map((file) =>
+      this._sendRequest("ExpressionActivationRequest", {
+        expressionFile: file,
+        active: false,
+        fadeTime,
+      }).catch((err) => {
+        console.error(`[${this.id}] 移除表情 "${file}" 失敗:`, err.message);
+      })
+    );
+    await Promise.allSettled(deactivations);
+    this._activeExpressions.clear();
+
+    this.eventBus.publish(`${this.id}:allExpressionsRemoved`, { deactivated: [...allToDeactivate] });
+    return { deactivated: [...allToDeactivate] };
   }
 
   async _tintArtMesh(params) {
@@ -370,7 +444,9 @@ class VTubeStudioDevice extends BaseDevice {
       if (fs.existsSync(this.tokenPath)) {
         this._token = fs.readFileSync(this.tokenPath, "utf-8").trim();
       }
-    } catch {}
+    } catch (err) {
+      console.error(`[${this.id}] Token 載入失敗:`, err.message);
+    }
   }
 
   _saveToken() {
