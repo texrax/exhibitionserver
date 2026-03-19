@@ -215,15 +215,6 @@ class VTubeStudioDevice extends BaseDevice {
   // ==================================================
 
   async _triggerHotkey(hotkeyID) {
-    // 播放新動畫前自動取消上一個動畫
-    if (typeof hotkeyID === "string" && hotkeyID.startsWith("播放動畫")) {
-      try {
-        await this._sendRequest("HotkeyTriggerRequest", { hotkeyID: "取消動作" });
-      } catch (err) {
-        console.error(`[${this.id}] 自動取消動作失敗:`, err.message);
-      }
-    }
-
     const result = await this._sendRequest("HotkeyTriggerRequest", { hotkeyID });
     this.eventBus.publish(`${this.id}:hotkeyTriggered`, { hotkeyID });
     return result.data;
