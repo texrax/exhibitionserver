@@ -109,7 +109,7 @@
     "actions": [
       { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃飯手開關" } },
       { "delay": 200 },
-      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "播放動畫(吃青菜)" } }
+      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃青菜" } }
     ]
   },
 
@@ -118,21 +118,21 @@
     "actions": [
       { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃飯手開關" } },
       { "delay": 200 },
-      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "播放動畫(吃丸子)" } }
+      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃完子" } }
     ]
   },
 
   "vts_not_eat": {
     "description": "VTS 不吃動畫",
     "actions": [
-      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "播放動畫(不吃)" } }
+      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "不吃" } }
     ]
   },
 
   "vts_idle": {
     "description": "VTS 待機動畫",
     "actions": [
-      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "播放動畫(待機)" } }
+      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "待機" } }
     ]
   },
 
