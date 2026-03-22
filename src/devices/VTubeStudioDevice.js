@@ -24,6 +24,7 @@ class VTubeStudioDevice extends BaseDevice {
     this._reconnectTimer = null;
     this._requestTimeout = config.requestTimeout || 10000;
     this._activeExpressions = new Set(); // 追蹤目前啟用的表情檔案名稱
+    this._expressionZoomed = false; // 追蹤表情拉近鏡頭狀態
   }
 
   async init() {
@@ -146,6 +147,7 @@ class VTubeStudioDevice extends BaseDevice {
         console.log(`[${this.id}] WebSocket 已斷線`);
         this._authenticated = false;
         this._activeExpressions.clear();
+        this._expressionZoomed = false;
         this._setStatus("offline");
         this._rejectAllPending("WebSocket 連線中斷");
         this._scheduleReconnect();
@@ -251,6 +253,16 @@ class VTubeStudioDevice extends BaseDevice {
       this._activeExpressions.clear();
     }
 
+    // 啟用表情時拉近鏡頭（僅第一次）
+    if (active && !this._expressionZoomed) {
+      try {
+        await this._moveModel({ timeInSeconds: 0.4, size: 25, positionY: 0.1, relative: true });
+        this._expressionZoomed = true;
+      } catch (err) {
+        console.error(`[${this.id}] 拉近鏡頭失敗:`, err.message);
+      }
+    }
+
     const result = await this._sendRequest("ExpressionActivationRequest", {
       expressionFile,
       active,
@@ -301,6 +313,16 @@ class VTubeStudioDevice extends BaseDevice {
     );
     await Promise.allSettled(deactivations);
     this._activeExpressions.clear();
+
+    // 移除表情後縮回鏡頭
+    if (this._expressionZoomed) {
+      try {
+        await this._sendRequest("HotkeyTriggerRequest", { hotkeyID: "回歸原點" });
+        this._expressionZoomed = false;
+      } catch (err) {
+        console.error(`[${this.id}] 縮回鏡頭失敗:`, err.message);
+      }
+    }
 
     this.eventBus.publish(`${this.id}:allExpressionsRemoved`, { deactivated: [...allToDeactivate] });
     return { deactivated: [...allToDeactivate] };
