@@ -84,7 +84,10 @@
         if (msg.payload.event === "bridge:connected") updateBridgeUI(true);
         if (msg.payload.event === "bridge:disconnected") updateBridgeUI(false);
         if (msg.payload.event === "bridge:devicesRegistered") requestStatus();
-        if (msg.payload.event.endsWith(":status")) requestStatus();
+        if (msg.payload.event.endsWith(":status")) {
+          requestStatus();
+          if (msg.payload.event === "wizlight:status") updateWizStatus(msg.payload.data);
+        }
         break;
       case "status":
         renderDevices(msg.payload.devices);
@@ -251,6 +254,42 @@
       hitachiOverlay.classList.remove("show");
     }
   });
+
+  // ---- Wiz Light 狀態更新 ----
+
+  function updateWizStatus(data) {
+    const bar = document.getElementById("wizStatusBar");
+    if (!bar) return;
+    bar.textContent = `Status: ${data?.status || "--"}${data?.error ? " | " + data.error : ""}`;
+  }
+
+  // ---- Wiz Light 控制 ----
+
+  window.wizPower = function (state) {
+    executeDevice("wizlight", state, {});
+  };
+
+  window.wizBrightness = function (val) {
+    executeDevice("wizlight", "setBrightness", { brightness: Number(val) });
+  };
+
+  window.wizColor = function () {
+    const hex = document.getElementById("wizColorPicker").value;
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    const brightness = Number(document.getElementById("wizBrightness").value);
+    executeDevice("wizlight", "setColor", { r, g, b, brightness });
+  };
+
+  window.wizTemp = function (temp) {
+    const brightness = Number(document.getElementById("wizBrightness").value);
+    executeDevice("wizlight", "setTemp", { temp, brightness });
+  };
+
+  window.wizScene = function (sceneId) {
+    executeDevice("wizlight", "setScene", { sceneId });
+  };
 
   function executeDevice(deviceId, action, params) {
     if (ws?.readyState !== 1) return showToast("WebSocket not connected");

@@ -44,6 +44,15 @@
         "cooldownMs": 3000,
         "timeout": 3000
       }
+    },
+    {
+      "id": "wizlight",
+      "type": "WizLightDevice",
+      "config": {
+        "ip": "192.168.0.127",
+        "port": 38899,
+        "timeout": 2000
+      }
     }
   ]
 }

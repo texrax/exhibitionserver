@@ -3,6 +3,7 @@
 統一控制展場中所有設備的中控伺服器，包括：
 - **VTube Studio** 虛擬角色（WebSocket API）
 - **ESP32** WiFi LED 燈光控制（HTTP）
+- **Philips Wiz** 智慧燈泡控制（UDP）
 - **音訊播放**（WAV 檔案）
 - **攝像頭感測**（Python 人臉偵測）
 - **YoloTD 視覺辨識**（餐桌互動偵測 → VTuber 動作觸發）
@@ -34,6 +35,7 @@ src/
     BaseDevice.js         ← 裝置抽象基類
     VTubeStudioDevice.js  ← VTube Studio WebSocket
     ESP32Device.js        ← ESP32 HTTP 燈光
+    WizLightDevice.js     ← Philips Wiz 智慧燈泡 (UDP)
     AudioPlayerDevice.js  ← WAV 音訊播放
     CameraSensorDevice.js ← 攝像頭人臉感測
     YoloDetectorDevice.js ← YoloTD 視覺辨識整合
@@ -158,6 +160,44 @@ https://exhibitionserver.onrender.com
 ```
 
 > **注意**：Render 免費方案在 15 分鐘無流量後會休眠，首次訪問可能需等 30 秒喚醒。
+
+## Philips Wiz 智慧燈泡
+
+透過 UDP 協議（port 38899）控制區域網路上的 Philips Wiz 燈泡，不需要雲端 API。
+
+### Dashboard 控制
+
+Dashboard 右側面板提供完整控制：開/關、亮度滑桿、RGB 色彩選擇、色溫快捷按鈕（暖光/自然光/冷光）、Wiz 內建場景。
+
+### 支援動作
+
+| Action | Params | 說明 |
+|--------|--------|------|
+| `on` | — | 開燈 |
+| `off` | — | 關燈 |
+| `setColor` | `r, g, b, brightness` | RGB 顏色 + 亮度 (10-100) |
+| `setTemp` | `temp, brightness` | 色溫 (2700-6500K) + 亮度 |
+| `setBrightness` | `brightness` | 僅調亮度 |
+| `setScene` | `sceneId` | Wiz 內建場景 (1=Ocean, 2=Romance, 4=Fireplace...) |
+| `getState` | — | 查詢燈泡狀態 |
+
+### 設定
+
+在 `config/devices.json` 中設定燈泡 IP：
+
+```json
+{
+  "id": "wizlight",
+  "type": "WizLightDevice",
+  "config": {
+    "ip": "192.168.1.100",
+    "port": 38899,
+    "timeout": 2000
+  }
+}
+```
+
+> 可新增多組 WizLightDevice 控制不同燈泡，只要給不同 `id` 和 `ip`。
 
 ## VTube Studio 首次連線
 

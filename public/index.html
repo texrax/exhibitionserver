@@ -62,7 +62,7 @@
 
     .main {
       display: grid;
-      grid-template-columns: 280px 1fr 320px;
+      grid-template-columns: 280px 1fr 320px 280px;
       grid-template-rows: 1fr 260px;
       gap: 1px;
       height: calc(100vh - 57px);
@@ -178,6 +178,7 @@
 
     /* ---- VTS 控制面板（右側） ---- */
     .vts-panel { grid-row: 1 / 2; }
+    .wiz-panel { grid-row: 1 / 2; }
 
     .vts-section {
       padding: 8px 16px;
@@ -346,6 +347,85 @@
       background: var(--red);
     }
 
+    /* ---- Wiz Light 控制面板 ---- */
+    .wiz-section {
+      padding: 8px 16px;
+    }
+
+    .wiz-section h4 {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    .wiz-power-group {
+      display: flex;
+      gap: 8px;
+    }
+
+    .wiz-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .wiz-btn:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .wiz-btn.on-btn:hover { background: var(--green); border-color: var(--green); }
+    .wiz-btn.off-btn:hover { background: var(--red); border-color: var(--red); }
+
+    .wiz-slider-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .wiz-slider-row input[type="range"] {
+      flex: 1;
+      accent-color: var(--accent);
+      height: 4px;
+    }
+
+    .wiz-slider-row .wiz-val {
+      font-size: 12px;
+      color: var(--text-dim);
+      min-width: 32px;
+      text-align: right;
+    }
+
+    .wiz-color-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .wiz-color-row input[type="color"] {
+      width: 36px;
+      height: 28px;
+      border: none;
+      background: none;
+      cursor: pointer;
+    }
+
+    .wiz-temp-group, .wiz-scene-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .wiz-status-bar {
+      padding: 4px 0;
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
     /* 響應式 */
     @media (max-width: 1024px) {
       .main {
@@ -441,6 +521,66 @@
         <div class="vts-btn-group">
           <button class="vts-btn" onclick="showHitachi()">日立</button>
         </div>
+      </div>
+    </div>
+
+    <!-- 右側：Wiz Light 控制 -->
+    <div class="panel wiz-panel">
+      <div class="panel-title">Wiz Light</div>
+
+      <div class="wiz-section">
+        <h4>Power</h4>
+        <div class="wiz-power-group">
+          <button class="wiz-btn on-btn" onclick="wizPower('on')" style="flex:1">ON</button>
+          <button class="wiz-btn off-btn" onclick="wizPower('off')" style="flex:1">OFF</button>
+        </div>
+      </div>
+
+      <div class="wiz-section">
+        <h4>Brightness</h4>
+        <div class="wiz-slider-row">
+          <input type="range" id="wizBrightness" min="10" max="100" value="100"
+                 oninput="document.getElementById('wizBrVal').textContent=this.value"
+                 onchange="wizBrightness(this.value)">
+          <span class="wiz-val" id="wizBrVal">100</span>
+        </div>
+      </div>
+
+      <div class="wiz-section">
+        <h4>Color</h4>
+        <div class="wiz-color-row">
+          <input type="color" id="wizColorPicker" value="#ff0000">
+          <button class="wiz-btn" onclick="wizColor()">Apply Color</button>
+        </div>
+      </div>
+
+      <div class="wiz-section">
+        <h4>Color Temperature</h4>
+        <div class="wiz-temp-group">
+          <button class="wiz-btn" onclick="wizTemp(2700)">Warm 2700K</button>
+          <button class="wiz-btn" onclick="wizTemp(4000)">Natural 4000K</button>
+          <button class="wiz-btn" onclick="wizTemp(6500)">Cool 6500K</button>
+        </div>
+      </div>
+
+      <div class="wiz-section">
+        <h4>Scenes</h4>
+        <div class="wiz-scene-group">
+          <button class="wiz-btn" onclick="wizScene(1)">Ocean</button>
+          <button class="wiz-btn" onclick="wizScene(2)">Romance</button>
+          <button class="wiz-btn" onclick="wizScene(4)">Fireplace</button>
+          <button class="wiz-btn" onclick="wizScene(5)">Forest</button>
+          <button class="wiz-btn" onclick="wizScene(6)">Pastel</button>
+          <button class="wiz-btn" onclick="wizScene(9)">Party</button>
+          <button class="wiz-btn" onclick="wizScene(10)">Spring</button>
+          <button class="wiz-btn" onclick="wizScene(11)">Summer</button>
+          <button class="wiz-btn" onclick="wizScene(14)">Focus</button>
+          <button class="wiz-btn" onclick="wizScene(15)">Relax</button>
+        </div>
+      </div>
+
+      <div class="wiz-section">
+        <div class="wiz-status-bar" id="wizStatusBar">Status: --</div>
       </div>
     </div>
 
