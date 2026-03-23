@@ -118,7 +118,7 @@
     "actions": [
       { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃飯手開關" } },
       { "delay": 200 },
-      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃完子" } }
+      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃丸子" } }
     ]
   },
 
@@ -154,6 +154,45 @@
     "description": "VTS 模型重新加載",
     "actions": [
       { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "模型重新加載" } }
+    ]
+  },
+
+  "yolo_deliver_vegetable": {
+    "description": "YOLO 偵測到青菜送達 — 觸發吃青菜動畫",
+    "trigger": {
+      "event": "yolo_detector:deliver",
+      "condition": { "food": "vegetables" }
+    },
+    "actions": [
+      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃飯手開關" } },
+      { "delay": 200 },
+      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃青菜" } }
+    ]
+  },
+
+  "yolo_deliver_pork": {
+    "description": "YOLO 偵測到豬肉送達 — 觸發吃丸子動畫",
+    "trigger": {
+      "event": "yolo_detector:deliver",
+      "condition": { "food": "pork" }
+    },
+    "actions": [
+      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃飯手開關" } },
+      { "delay": 200 },
+      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃丸子" } }
+    ]
+  },
+
+  "yolo_deliver_beef": {
+    "description": "YOLO 偵測到牛肉送達 — 觸發吃丸子動畫",
+    "trigger": {
+      "event": "yolo_detector:deliver",
+      "condition": { "food": "beef" }
+    },
+    "actions": [
+      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃飯手開關" } },
+      { "delay": 200 },
+      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃丸子" } }
     ]
   },
 

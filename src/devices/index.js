@@ -6,6 +6,7 @@ const AudioPlayerDevice = require("./AudioPlayerDevice");
 const CameraSensorDevice = require("./CameraSensorDevice");
 const VTubeStudioDevice = require("./VTubeStudioDevice");
 const RemoteDevice = require("./RemoteDevice");
+const YoloDetectorDevice = require("./YoloDetectorDevice");
 
 /**
  * 裝置類型名稱 → 類別對應表
@@ -17,4 +18,5 @@ module.exports = {
   CameraSensorDevice,
   VTubeStudioDevice,
   RemoteDevice,
+  YoloDetectorDevice,
 };

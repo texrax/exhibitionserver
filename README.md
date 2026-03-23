@@ -5,6 +5,7 @@
 - **ESP32** WiFi LED 燈光控制（HTTP）
 - **音訊播放**（WAV 檔案）
 - **攝像頭感測**（Python 人臉偵測）
+- **YoloTD 視覺辨識**（餐桌互動偵測 → VTuber 動作觸發）
 - 未來可擴充任意設備
 
 ## 快速啟動
@@ -35,6 +36,7 @@ src/
     ESP32Device.js        ← ESP32 HTTP 燈光
     AudioPlayerDevice.js  ← WAV 音訊播放
     CameraSensorDevice.js ← 攝像頭人臉感測
+    YoloDetectorDevice.js ← YoloTD 視覺辨識整合
     index.js              ← 裝置類型註冊表
   routes/
     apiRoutes.js     ← REST API（裝置控制 + 向下相容端點）
@@ -192,3 +194,42 @@ https://exhibitionserver.onrender.com
 ### 動畫自動取消
 
 播放新動畫（名稱以「播放動畫」開頭的熱鍵）時，系統會自動先觸發「取消動作」熱鍵清除上一個動畫。
+
+## YoloTD 視覺辨識整合
+
+系統整合了 [YoloTD](../yoloTD) 餐桌視覺辨識專案，當偵測到筷子夾菜成功送到碗裡時，自動觸發 VTuber 吃飯動畫。
+
+### 運作方式
+
+`YoloDetectorDevice` 每 500ms 輪詢 YoloTD 伺服器的 `GET /status` 端點，追蹤 `dining_events` 中的事件狀態。當偵測到 `deliver`（食物成功送達碗裡）事件時，發射 EventBus 事件觸發對應場景：
+
+| 食物 | 觸發場景 | VTuber 動作 |
+|------|---------|------------|
+| vegetables（青菜） | `yolo_deliver_vegetable` | 吃飯手開關 + 吃青菜 |
+| pork（豬肉） | `yolo_deliver_pork` | 吃飯手開關 + 吃丸子 |
+| beef（牛肉） | `yolo_deliver_beef` | 吃飯手開關 + 吃丸子 |
+
+### 啟動方式
+
+1. 先啟動 YoloTD 伺服器：
+   ```bash
+   cd /path/to/yoloTD/src
+   YOLO_PROFILE=y11 python server.py
+   ```
+2. 再啟動中控系統：
+   ```bash
+   npm start
+   ```
+
+Dashboard 上可看到 `yolo_detector` 裝置狀態。YoloTD 離線時裝置標記為 offline，上線後自動恢復。
+
+### 設定
+
+在 `config/devices.json` 中調整 YoloDetector 參數：
+
+| 參數 | 預設值 | 說明 |
+|------|--------|------|
+| `url` | `http://localhost:8000` | YoloTD 伺服器位址 |
+| `pollIntervalMs` | `500` | 輪詢間隔（毫秒） |
+| `cooldownMs` | `3000` | 同類事件最短觸發間隔，防止動畫被覆蓋 |
+| `timeout` | `3000` | HTTP 請求逾時 |

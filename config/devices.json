@@ -34,6 +34,16 @@
         "script": "./camera.py",
         "triggerThreshold": 0.8
       }
+    },
+    {
+      "id": "yolo_detector",
+      "type": "YoloDetectorDevice",
+      "config": {
+        "url": "http://localhost:8000",
+        "pollIntervalMs": 500,
+        "cooldownMs": 3000,
+        "timeout": 3000
+      }
     }
   ]
 }
