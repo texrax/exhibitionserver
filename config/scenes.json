@@ -13,58 +13,58 @@
   },
 
   "play_day_1": {
-    "description": "星期一 — 吃飯動畫 + 粉紫閃爍",
+    "description": "星期一 — 吃飯動畫 + 紅色閃爍",
     "actions": [
       { "device": "vtubestudio", "action": "setExpression", "params": { "file": "吃飯手開關.exp3.json", "active": true } },
-      { "device": "esp32_main", "action": "setMode", "params": { "mode": "blink", "color": { "r": 255, "g": 100, "b": 255 } } },
+      { "device": "esp32_main", "action": "setMode", "params": { "mode": "random_blocks", "color": { "r": 255, "g": 130, "b": 130 } } },
       { "device": "audio", "action": "play", "params": { "file": "星期一.wav" } }
     ]
   },
 
   "play_day_2": {
-    "description": "星期二 — 粉紫閃爍",
+    "description": "星期二 — 橘色燈光",
     "actions": [
-      { "device": "esp32_main", "action": "setMode", "params": { "mode": "blink", "color": { "r": 255, "g": 100, "b": 255 } } },
+      { "device": "esp32_main", "action": "setMode", "params": { "mode": "random_blocks", "color": { "r": 255, "g": 200, "b": 120 } } },
       { "device": "audio", "action": "play", "params": { "file": "星期二.wav" } }
     ]
   },
 
   "play_day_3": {
-    "description": "星期三 — 淡綠波浪",
+    "description": "星期三 — 黃色波浪",
     "actions": [
-      { "device": "esp32_main", "action": "setMode", "params": { "mode": "block_wave", "color": { "r": 71, "g": 255, "b": 121 } } },
+      { "device": "esp32_main", "action": "setMode", "params": { "mode": "block_wave", "color": { "r": 240, "g": 240, "b": 150 } } },
       { "device": "audio", "action": "play", "params": { "file": "星期三.wav" } }
     ]
   },
 
   "play_day_4": {
-    "description": "星期四 — 粉紫閃爍",
+    "description": "星期四 — 綠色波浪",
     "actions": [
-      { "device": "esp32_main", "action": "setMode", "params": { "mode": "blink", "color": { "r": 255, "g": 100, "b": 255 } } },
+      { "device": "esp32_main", "action": "setMode", "params": { "mode": "block_wave", "color": { "r": 150, "g": 230, "b": 180 } } },
       { "device": "audio", "action": "play", "params": { "file": "星期四.wav" } }
     ]
   },
 
   "play_day_5": {
-    "description": "星期五 — 粉紫閃爍",
+    "description": "星期五 — 藍色閃爍",
     "actions": [
-      { "device": "esp32_main", "action": "setMode", "params": { "mode": "blink", "color": { "r": 255, "g": 100, "b": 255 } } },
+      { "device": "esp32_main", "action": "flashEffect", "params": { "color": { "r": 130, "g": 190, "b": 255 } } },
       { "device": "audio", "action": "play", "params": { "file": "星期五.wav" } }
     ]
   },
 
   "play_day_6": {
-    "description": "星期六 — 粉紫閃爍",
+    "description": "星期六 — 紫色閃爍",
     "actions": [
-      { "device": "esp32_main", "action": "setMode", "params": { "mode": "blink", "color": { "r": 255, "g": 100, "b": 255 } } },
+      { "device": "esp32_main", "action": "flashEffect", "params": { "color": { "r": 180, "g": 160, "b": 255 } } },
       { "device": "audio", "action": "play", "params": { "file": "星期六日.wav" } }
     ]
   },
 
   "play_day_7": {
-    "description": "星期日 — 粉紫閃爍",
+    "description": "星期日 — 粉色漣漪",
     "actions": [
-      { "device": "esp32_main", "action": "setMode", "params": { "mode": "blink", "color": { "r": 255, "g": 100, "b": 255 } } },
+      { "device": "esp32_main", "action": "setMode", "params": { "mode": "ripple", "color": { "r": 255, "g": 180, "b": 220 } } },
       { "device": "audio", "action": "play", "params": { "file": "星期六日.wav" } }
     ]
   },

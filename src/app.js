@@ -27,28 +27,6 @@ async function main() {
   const sceneManager = new SceneManager(eventBus, deviceManager);
   let bridgeManager = null;
 
-  eventBus.on("audio:finished", (data) => {
-  console.log(`[AutoStandby] 偵測到音效播放完畢`);
-
-  setTimeout(() => {
-    // 💡 我們先把要找的裝置抓出來，看看它的 IP 是什麼
-    const target = deviceManager.get("esp32_main");
-    if (target) {
-        console.log(`[AutoStandby] 準備發送到 IP: ${target.baseUrl}`);
-    } else {
-        console.error(`[AutoStandby] 錯誤：找不到名為 esp32_main 的裝置！請檢查 devices.json`);
-    }
-
-    deviceManager.executeOnDevice("esp32_main", "setMode", {
-      mode: "standby",
-      color: { r: 255, g: 255, b: 255 }
-    })
-    .then(() => console.log("[AutoStandby] ✅ 指令已成功送出"))
-    .catch(err => console.error("[AutoStandby] ❌ 網路發送失敗:", err.message));
-  }, 1000);
-});
-
-// 其他事件監聽器也可以在這裡註冊，例如裝置狀態變更、場景觸發等
   console.log(`=== 展場中控系統啟動中 (${IS_CLOUD ? "雲端模式" : "本地模式"}) ===`);
 
   if (IS_CLOUD) {
