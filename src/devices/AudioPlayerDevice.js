@@ -53,7 +53,7 @@ class AudioPlayerDevice extends BaseDevice {
 
   // ---- 私有方法 ----
 
-  async _play(file) {
+ async _play(file) {
     if (this.isPlaying) {
       console.log(`[${this.id}] 忽略播放請求 — 音樂播放中: ${this.currentFile}`);
       return { status: "busy", currentFile: this.currentFile };
@@ -66,14 +66,30 @@ class AudioPlayerDevice extends BaseDevice {
     this.eventBus.publish(`${this.id}:playing`, { file });
 
     try {
-      await player.play({ path: filePath, sync: true });
-      console.log(`[${this.id}] 播放結束: ${file}`);
+      // 💡 關鍵改動：將 sync 改為 false
+      // 這樣 Node.js 呼叫完播放指令後會立刻繼續往下走，不會被卡住
+      player.play({ path: filePath, sync: false }).then(() => {
+        // 雖然 sync 為 false，但部分播放器在播放完畢後仍會觸發 resolve
+        // 如果你的環境還是太慢，我們就在這裡手動解鎖
+      }).catch(err => {
+        console.error(`[${this.id}] 播放過程出錯:`, err.message);
+      });
+
+      // 💡 為了讓 SceneManager 能夠立刻執行後續的燈光 delay
+      // 我們直接回傳 OK，不要在這裡 await player.play
+      
     } catch (err) {
-      console.error(`[${this.id}] 播放錯誤:`, err.message);
+      console.error(`[${this.id}] 播放指令啟動失敗:`, err.message);
     } finally {
-      this.isPlaying = false;
-      this.currentFile = null;
-      this.eventBus.publish(`${this.id}:finished`, { file });
+      // 💡 宇恒注意：因為我們改為非同步，這裡需要根據音檔大約長度來「手動解鎖」
+      // 或者是直接設定為 false 讓下一次觸發可以進行
+      // 為了保險，我們這裡讓它 1 秒後就恢復可播放狀態
+      setTimeout(() => {
+        this.isPlaying = false;
+        this.currentFile = null;
+        this.eventBus.publish(`${this.id}:finished`, { file });
+        console.log(`[${this.id}] 播放器已就緒 (解鎖)`);
+      }, 1000); 
     }
 
     return { status: "ok" };
