@@ -289,7 +289,7 @@ const char* ssid = "table";
 const char* password = "00000000"; 
 
 // 💡 筆電 IP：請務必確認 ipconfig 查到的是 31.21
-const String serverURL = "http://192.168.31.47:3000"; 
+const String serverURL = "http://192.168.31.21:3000"; 
 
 // ==========================================
 // 2. 🌈 燈條與感測器設定
