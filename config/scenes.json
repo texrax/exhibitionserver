@@ -15,73 +15,87 @@
   },
 
   "play_day_1": {
-    "description": "星期一 — 吃飯動畫 + 數位閃爍",
+    "description": "星期一 — 哀傷 + 吃飯動畫 + 數位閃爍",
     "actions": [
+      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "哀傷.exp3.json", "active": true, "fadeTime": 0.3 } },
       { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃飯手開關" } },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "blink" } },
       { "device": "audio", "action": "play", "params": { "file": "星期一.wav" } },
       { "delay": 7000 },
-      { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } }
+      { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } },
+      { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } }
     ]
   },
 
   "play_day_2": {
-    "description": "星期二 — 數位閃爍",
+    "description": "星期二 — 哀傷 + 數位閃爍",
     "actions": [
+      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "哀傷.exp3.json", "active": true, "fadeTime": 0.3 } },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "blink" } },
       { "device": "audio", "action": "play", "params": { "file": "星期二.wav" } },
       { "delay": 7000 },
-      { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } }
+      { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } },
+      { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } }
     ]
   },
 
   "play_day_3": {
-    "description": "星期三 — 琥珀色波浪 (和諧感)",
+    "description": "星期三 — 開心 + 琥珀色波浪 (和諧感)",
     "actions": [
+      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "開心(睜眼).exp3.json", "active": true, "fadeTime": 0.3 } },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "block_wave" } },
       { "device": "audio", "action": "play", "params": { "file": "星期三.wav" } },
       { "delay": 7000 },
-      { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } }
+      { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } },
+      { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } }
     ]
   },
 
   "play_day_4": {
-    "description": "星期四 — 琥珀色波浪",
+    "description": "星期四 — 哀傷 + 琥珀色波浪",
     "actions": [
+      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "哀傷.exp3.json", "active": true, "fadeTime": 0.3 } },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "blink" } },
       { "device": "audio", "action": "play", "params": { "file": "星期四.wav" } },
       { "delay": 7000 },
-      { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } }
+      { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } },
+      { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } }
     ]
   },
 
   "play_day_5": {
-    "description": "星期五 — 數位閃爍",
+    "description": "星期五 — 哀傷 + 數位閃爍",
     "actions": [
+      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "哀傷.exp3.json", "active": true, "fadeTime": 0.3 } },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "blink" } },
       { "device": "audio", "action": "play", "params": { "file": "星期五.wav" } },
       { "delay": 7000 },
-      { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } }
+      { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } },
+      { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } }
     ]
   },
 
   "play_day_6": {
-    "description": "星期六 — 數位閃爍",
+    "description": "星期六 — 哀傷 + 數位閃爍",
     "actions": [
+      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "哀傷.exp3.json", "active": true, "fadeTime": 0.3 } },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "blink" } },
       { "device": "audio", "action": "play", "params": { "file": "星期六日.wav" } },
       { "delay": 7000 },
-      { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } }
+      { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } },
+      { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } }
     ]
   },
 
   "play_day_7": {
-    "description": "星期日 — 數位閃爍",
+    "description": "星期日 — 哀傷 + 數位閃爍",
     "actions": [
+      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "哀傷.exp3.json", "active": true, "fadeTime": 0.3 } },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "blink" } },
       { "device": "audio", "action": "play", "params": { "file": "星期六日.wav" } },
       { "delay": 7000 },
-      { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } }
+      { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } },
+      { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } }
     ]
   },
 
