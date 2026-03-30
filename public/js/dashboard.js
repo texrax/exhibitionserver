@@ -86,7 +86,7 @@
         if (msg.payload.event === "bridge:devicesRegistered") requestStatus();
         if (msg.payload.event.endsWith(":status")) {
           requestStatus();
-          if (msg.payload.event === "wizlight:status") updateWizStatus(msg.payload.data);
+          if (msg.payload.event.startsWith("wizlight_")) updateWizStatus(msg.payload.data, msg.payload.event);
         }
         break;
       case "status":
@@ -255,22 +255,45 @@
     }
   });
 
-  // ---- Wiz Light 狀態更新 ----
+  // ---- Wiz Light 多燈控制 ----
 
-  function updateWizStatus(data) {
-    const bar = document.getElementById("wizStatusBar");
-    if (!bar) return;
-    bar.textContent = `Status: ${data?.status || "--"}${data?.error ? " | " + data.error : ""}`;
-  }
+  const WIZ_IDS = ["wizlight_1", "wizlight_2"];
+  let wizTarget = "all"; // "all" | "wizlight_1" | "wizlight_2"
 
-  // ---- Wiz Light 控制 ----
-
-  window.wizPower = function (state) {
-    executeDevice("wizlight", state, {});
+  window.wizSetTarget = function (target) {
+    wizTarget = target;
+    document.querySelectorAll(".wiz-target").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.target === target);
+    });
   };
 
+  function wizExec(action, params) {
+    if (wizTarget === "all") {
+      WIZ_IDS.forEach((id) => executeDevice(id, action, params));
+    } else {
+      executeDevice(wizTarget, action, params);
+    }
+  }
+
+  // 狀態更新
+  const wizStatuses = {};
+  function updateWizStatus(data, event) {
+    const id = event?.replace(":status", "") || "";
+    if (id) wizStatuses[id] = data;
+    const bar = document.getElementById("wizStatusBar");
+    if (!bar) return;
+    bar.textContent = WIZ_IDS.map((id) => {
+      const s = wizStatuses[id];
+      const label = id.replace("wizlight_", "L");
+      return s ? `${label}: ${s.status}` : `${label}: --`;
+    }).join(" | ");
+  }
+
+  // 控制函式
+  window.wizPower = function (state) { wizExec(state, {}); };
+
   window.wizBrightness = function (val) {
-    executeDevice("wizlight", "setBrightness", { brightness: Number(val) });
+    wizExec("setBrightness", { brightness: Number(val) });
   };
 
   window.wizColor = function () {
@@ -279,17 +302,15 @@
     const g = parseInt(hex.slice(3, 5), 16);
     const b = parseInt(hex.slice(5, 7), 16);
     const brightness = Number(document.getElementById("wizBrightness").value);
-    executeDevice("wizlight", "setColor", { r, g, b, brightness });
+    wizExec("setColor", { r, g, b, brightness });
   };
 
   window.wizTemp = function (temp) {
     const brightness = Number(document.getElementById("wizBrightness").value);
-    executeDevice("wizlight", "setTemp", { temp, brightness });
+    wizExec("setTemp", { temp, brightness });
   };
 
-  window.wizScene = function (sceneId) {
-    executeDevice("wizlight", "setScene", { sceneId });
-  };
+  window.wizScene = function (sceneId) { wizExec("setScene", { sceneId }); };
 
   function executeDevice(deviceId, action, params) {
     if (ws?.readyState !== 1) return showToast("WebSocket not connected");

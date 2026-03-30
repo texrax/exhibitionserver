@@ -420,6 +420,21 @@
       gap: 6px;
     }
 
+    .wiz-target-group {
+      display: flex;
+      gap: 6px;
+    }
+
+    .wiz-target {
+      flex: 1;
+      text-align: center;
+    }
+
+    .wiz-target.active {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
     .wiz-status-bar {
       padding: 4px 0;
       font-size: 11px;
@@ -529,6 +544,15 @@
       <div class="panel-title">Wiz Light</div>
 
       <div class="wiz-section">
+        <h4>Target</h4>
+        <div class="wiz-target-group">
+          <button class="wiz-btn wiz-target active" data-target="all" onclick="wizSetTarget('all')">All</button>
+          <button class="wiz-btn wiz-target" data-target="wizlight_1" onclick="wizSetTarget('wizlight_1')">Light 1</button>
+          <button class="wiz-btn wiz-target" data-target="wizlight_2" onclick="wizSetTarget('wizlight_2')">Light 2</button>
+        </div>
+      </div>
+
+      <div class="wiz-section">
         <h4>Power</h4>
         <div class="wiz-power-group">
           <button class="wiz-btn on-btn" onclick="wizPower('on')" style="flex:1">ON</button>
@@ -580,7 +604,7 @@
       </div>
 
       <div class="wiz-section">
-        <div class="wiz-status-bar" id="wizStatusBar">Status: --</div>
+        <div class="wiz-status-bar" id="wizStatusBar">Light 1: -- | Light 2: --</div>
       </div>
     </div>
 
