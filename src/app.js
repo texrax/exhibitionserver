@@ -47,6 +47,25 @@ async function main() {
   // Express 設定
   const app = express();
   app.use(express.json());
+  // --- 💡 宇恆：在這裡加入自動報到路由 ---
+  app.post("/api/devices/register", (req, res) => {
+    const { id, ip } = req.body;
+    
+    // 從 deviceManager 的 devices Map 中找出你的 ESP32
+    // 你的 ID 應該是 "esp32_main" (對應 scenes.json)
+    const device = deviceManager.devices.get(id);
+
+    if (device) {
+      // 動態更新該裝置的 baseUrl
+      device.baseUrl = `http://${ip}`;
+      console.log(`📡 [Device] 設備報到成功: [${id}] 門牌更新為 -> ${ip}`);
+      res.json({ status: "success", ip });
+    } else {
+      console.log(`⚠️ [Device] 報到失敗: 系統中沒有識別碼為 [${id}] 的裝置`);
+      res.status(404).json({ status: "error", message: "Device ID not found" });
+    }
+  });
+  // ----------------------------------------
   app.use(express.static(path.resolve(__dirname, "../public")));
   app.set("scenesConfigPath", SCENES_CONFIG);
 
@@ -54,6 +73,7 @@ async function main() {
   app.use("/api", createApiRoutes(deviceManager, eventBus));
   app.use("/api", createSceneRoutes(sceneManager));
 
+  
   // Bridge 狀態端點（雲端模式）
   if (IS_CLOUD) {
     app.get("/api/bridge", (req, res) => {

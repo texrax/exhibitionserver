@@ -7,7 +7,7 @@ const BaseDevice = require("./BaseDevice");
 class ESP32Device extends BaseDevice {
   constructor(id, config, eventBus) {
     super(id, config, eventBus);
-    this.baseUrl = `http://${config.ip || "192.168.4.1"}`;
+    this.baseUrl = `http://${config.ip || "192.168.31.101"}`;
 
     // 💡 修正 1：將預設 Timeout 從 200ms 提高到 3000ms (3秒)
     // 展場環境 WiFi 較不穩，給予足夠時間讓指令送達

@@ -1,26 +1,10 @@
 {
-  "visitor_greeting": {
-    "description": "訪客靠近 — 角色打招呼 + 燈光歡迎",
-    "trigger": {
-      "event": "camera:faceDetected",
-      "condition": { "brightness": ">0.8" }
-    },
-    "actions": [
-      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "開心(睜眼)" } },
-      { "device": "esp32_main", "action": "setMode", "params": { "mode": "block_wave" } },
-      { "device": "audio", "action": "play", "params": { "file": "welcome.wav" } },
-      { "delay": 8000 },
-      { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } }
-    ]
-  },
-
   "play_day_1": {
-    "description": "星期一 — 哀傷 + 吃飯動畫 + 數位閃爍",
+    "description": "星期一 — 數位閃爍 + 哀傷",
     "actions": [
-      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "哀傷.exp3.json", "active": true, "fadeTime": 0.3 } },
-      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃飯手開關" } },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "blink" } },
       { "device": "audio", "action": "play", "params": { "file": "星期一.wav" } },
+      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "哀傷.exp3.json", "active": true, "fadeTime": 0.3 } },
       { "delay": 7000 },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } },
       { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } }
@@ -28,11 +12,11 @@
   },
 
   "play_day_2": {
-    "description": "星期二 — 哀傷 + 數位閃爍",
+    "description": "星期二 — 數位閃爍 + 哀傷",
     "actions": [
-      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "哀傷.exp3.json", "active": true, "fadeTime": 0.3 } },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "blink" } },
       { "device": "audio", "action": "play", "params": { "file": "星期二.wav" } },
+      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "哀傷.exp3.json", "active": true, "fadeTime": 0.3 } },
       { "delay": 7000 },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } },
       { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } }
@@ -40,11 +24,11 @@
   },
 
   "play_day_3": {
-    "description": "星期三 — 開心 + 琥珀色波浪 (和諧感)",
+    "description": "星期三 — 琥珀色波浪 + 開心 (唯一特例)",
     "actions": [
-      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "開心(睜眼).exp3.json", "active": true, "fadeTime": 0.3 } },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "block_wave" } },
       { "device": "audio", "action": "play", "params": { "file": "星期三.wav" } },
+      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "開心(睜眼).exp3.json", "active": true, "fadeTime": 0.3 } },
       { "delay": 7000 },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } },
       { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } }
@@ -52,11 +36,11 @@
   },
 
   "play_day_4": {
-    "description": "星期四 — 哀傷 + 琥珀色波浪",
+    "description": "星期四 — 數位閃爍 + 哀傷",
     "actions": [
-      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "哀傷.exp3.json", "active": true, "fadeTime": 0.3 } },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "blink" } },
       { "device": "audio", "action": "play", "params": { "file": "星期四.wav" } },
+      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "哀傷.exp3.json", "active": true, "fadeTime": 0.3 } },
       { "delay": 7000 },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } },
       { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } }
@@ -64,11 +48,11 @@
   },
 
   "play_day_5": {
-    "description": "星期五 — 哀傷 + 數位閃爍",
+    "description": "星期五 — 數位閃爍 + 哀傷",
     "actions": [
-      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "哀傷.exp3.json", "active": true, "fadeTime": 0.3 } },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "blink" } },
       { "device": "audio", "action": "play", "params": { "file": "星期五.wav" } },
+      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "哀傷.exp3.json", "active": true, "fadeTime": 0.3 } },
       { "delay": 7000 },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } },
       { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } }
@@ -76,11 +60,11 @@
   },
 
   "play_day_6": {
-    "description": "星期六 — 哀傷 + 數位閃爍",
+    "description": "星期六 — 數位閃爍 + 哀傷",
     "actions": [
-      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "哀傷.exp3.json", "active": true, "fadeTime": 0.3 } },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "blink" } },
       { "device": "audio", "action": "play", "params": { "file": "星期六日.wav" } },
+      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "哀傷.exp3.json", "active": true, "fadeTime": 0.3 } },
       { "delay": 7000 },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } },
       { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } }
@@ -88,153 +72,47 @@
   },
 
   "play_day_7": {
-    "description": "星期日 — 哀傷 + 數位閃爍",
+    "description": "星期日 — 數位閃爍 + 哀傷",
     "actions": [
-      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "哀傷.exp3.json", "active": true, "fadeTime": 0.3 } },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "blink" } },
       { "device": "audio", "action": "play", "params": { "file": "星期六日.wav" } },
+      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "哀傷.exp3.json", "active": true, "fadeTime": 0.3 } },
       { "delay": 7000 },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } },
       { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } }
     ]
   },
 
-  "vts_surprise": {
-    "description": "VTS 驚訝表情",
-    "actions": [
-      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "驚訝.exp3.json", "active": true, "fadeTime": 0.3 } }
-    ]
-  },
-
-  "vts_angry": {
-    "description": "VTS 生氣表情",
-    "actions": [
-      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "生氣.exp3.json", "active": true, "fadeTime": 0.3 } }
-    ]
-  },
-
-  "vts_sad": {
-    "description": "VTS 哀傷表情",
-    "actions": [
-      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "哀傷.exp3.json", "active": true, "fadeTime": 0.3 } }
-    ]
-  },
-
-  "vts_happy_open": {
-    "description": "VTS 開心(睜眼)表情",
-    "actions": [
-      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "開心(睜眼).exp3.json", "active": true, "fadeTime": 0.3 } }
-    ]
-  },
-
-  "vts_happy_close": {
-    "description": "VTS 開心(閉眼)表情",
-    "actions": [
-      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "開心(閉眼).exp3.json", "active": true, "fadeTime": 0.3 } }
-    ]
-  },
-
-  "vts_eat_vegetable": {
-    "description": "VTS 吃青菜動畫",
-    "actions": [
-      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃飯手開關" } },
-      { "delay": 200 },
-      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃青菜" } }
-    ]
-  },
-
-  "vts_eat_meatball": {
-    "description": "VTS 吃丸子動畫",
-    "actions": [
-      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃飯手開關" } },
-      { "delay": 200 },
-      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃丸子" } }
-    ]
-  },
-
-  "vts_not_eat": {
-    "description": "VTS 不吃動畫",
-    "actions": [
-      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "不吃" } }
-    ]
-  },
-
-  "vts_idle": {
-    "description": "VTS 待機動畫",
-    "actions": [
-      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "待機" } }
-    ]
-  },
-
-  "vts_remove_expression": {
-    "description": "VTS 移除所有表情",
-    "actions": [
-      { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.25 } }
-    ]
-  },
-
-  "vts_reset_position": {
-    "description": "VTS 回歸原點",
-    "actions": [
-      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "回歸原點" } }
-    ]
-  },
-
-  "vts_reload_model": {
-    "description": "VTS 模型重新加載",
-    "actions": [
-      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "模型重新加載" } }
-    ]
-  },
-
   "yolo_deliver_vegetable": {
-    "description": "YOLO 偵測到青菜送達 — 觸發吃青菜動畫",
-    "trigger": {
-      "event": "yolo_detector:deliver",
-      "condition": { "food": "vegetables" }
-    },
+    "description": "YOLO 青菜 — 琥珀燈光 + 吃青菜動畫",
+    "trigger": { "event": "yolo_detector:deliver", "condition": { "food": "vegetables" } },
     "actions": [
+      { "device": "esp32_main", "action": "setMode", "params": { "mode": "block_wave" } },
       { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃飯手開關" } },
-      { "delay": 200 },
-      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃青菜" } }
-    ]
-  },
-
-  "yolo_deliver_pork": {
-    "description": "YOLO 偵測到豬肉送達 — 生氣並拒吃",
-    "trigger": {
-      "event": "yolo_detector:deliver",
-      "condition": { "food": "pork" }
-    },
-    "actions": [
-      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "生氣.exp3.json", "active": true, "fadeTime": 0.3 } },
-      { "delay": 300 },
-      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "不吃" } },
-      { "delay": 4000 },
-      { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } },
-      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "待機" } }
+      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃青菜" } },
+      { "delay": 5000 },
+      { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } }
     ]
   },
 
   "yolo_deliver_beef": {
-    "description": "YOLO 偵測到牛肉送達 — 觸發吃丸子動畫",
-    "trigger": {
-      "event": "yolo_detector:deliver",
-      "condition": { "food": "beef" }
-    },
+    "description": "YOLO 牛肉 — 琥珀燈光 + 吃丸子動畫",
+    "trigger": { "event": "yolo_detector:deliver", "condition": { "food": "beef" } },
     "actions": [
+      { "device": "esp32_main", "action": "setMode", "params": { "mode": "block_wave" } },
       { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃飯手開關" } },
-      { "delay": 200 },
-      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃丸子" } }
+      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃丸子" } },
+      { "delay": 5000 },
+      { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } }
     ]
   },
 
   "all_off": {
-    "description": "全部關閉 — 燈光關閉、停止播放",
-    "exclusive": false,
+    "description": "全部關閉",
     "actions": [
       { "device": "esp32_main", "action": "off", "params": {} },
-      { "device": "audio", "action": "stop", "params": {} }
+      { "device": "audio", "action": "stop", "params": {} },
+      { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } }
     ]
   }
 }
