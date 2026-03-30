@@ -187,15 +187,18 @@
   },
 
   "yolo_deliver_pork": {
-    "description": "YOLO 偵測到豬肉送達 — 觸發吃丸子動畫",
+    "description": "YOLO 偵測到豬肉送達 — 生氣並拒吃",
     "trigger": {
       "event": "yolo_detector:deliver",
       "condition": { "food": "pork" }
     },
     "actions": [
-      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃飯手開關" } },
-      { "delay": 200 },
-      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃丸子" } }
+      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "生氣.exp3.json", "active": true, "fadeTime": 0.3 } },
+      { "delay": 300 },
+      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "不吃" } },
+      { "delay": 4000 },
+      { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } },
+      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "待機" } }
     ]
   },
 
