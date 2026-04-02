@@ -129,6 +129,41 @@ class WizLightDevice extends BaseDevice {
   async destroy() {
     await super.destroy();
   }
+
+  /**
+   * UDP 廣播掃描區域網路上所有 Wiz 燈泡
+   * @returns {Promise<Array<{ip: string, mac: string, state: object}>>}
+   */
+  static discover(timeout = 3000) {
+    return new Promise((resolve) => {
+      const sock = dgram.createSocket("udp4");
+      const msg = JSON.stringify({ id: 1, method: "getPilot", params: {} });
+      const found = [];
+
+      sock.bind(() => {
+        sock.setBroadcast(true);
+        sock.send(msg, 38899, "255.255.255.255");
+      });
+
+      sock.on("message", (data, rinfo) => {
+        try {
+          const res = JSON.parse(data.toString());
+          const mac = res.result?.mac || "unknown";
+          // 用 MAC 去重，避免同一顆燈回應多次
+          if (!found.some((f) => f.mac === mac)) {
+            found.push({ ip: rinfo.address, mac, state: res.result || {} });
+          }
+        } catch {}
+      });
+
+      sock.on("error", () => { sock.close(); resolve(found); });
+
+      setTimeout(() => {
+        sock.close();
+        resolve(found);
+      }, timeout);
+    });
+  }
 }
 
 module.exports = WizLightDevice;

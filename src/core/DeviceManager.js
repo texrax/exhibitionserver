@@ -3,6 +3,7 @@
 
 const fs = require("fs");
 const deviceTypes = require("../devices");
+const WizLightDevice = require("../devices/WizLightDevice");
 
 class DeviceManager {
   constructor(eventBus) {
@@ -19,6 +20,9 @@ class DeviceManager {
     for (const entry of devices) {
       await this.register(entry.id, entry.type, entry.config);
     }
+
+    // 自動掃描 Wiz 燈泡
+    await this._discoverWizLights();
 
     // 💡 啟動背景監控：每 10 秒檢查一次有沒有裝置「掉線」
     this._startHealthCheck();
@@ -43,11 +47,50 @@ class DeviceManager {
     }
   }
 
+  /**
+   * 自動掃描區域網路上的 Wiz 燈泡，動態註冊尚未存在的燈泡
+   * MAC 地址作為穩定 ID，不怕 IP 變動
+   */
+  async _discoverWizLights() {
+    console.log("[DeviceManager] 🔍 掃描 Wiz 燈泡...");
+    const lights = await WizLightDevice.discover(3000);
+
+    if (lights.length === 0) {
+      console.log("[DeviceManager] 未發現 Wiz 燈泡");
+      return;
+    }
+
+    // 移除 config 裡寫死的 WizLightDevice（用自動掃描取代）
+    for (const [id, device] of this.devices) {
+      if (device instanceof WizLightDevice) {
+        await device.destroy();
+        this.devices.delete(id);
+      }
+    }
+
+    // 依 MAC 排序後依序註冊 wizlight_1, wizlight_2, ...
+    lights.sort((a, b) => a.mac.localeCompare(b.mac));
+    for (let i = 0; i < lights.length; i++) {
+      const { ip, mac } = lights[i];
+      const id = `wizlight_${i + 1}`;
+      console.log(`[DeviceManager] 💡 發現 Wiz: ${id} → ${ip} (MAC: ${mac})`);
+      await this.register(id, "WizLightDevice", { ip, port: 38899, timeout: 2000 });
+    }
+
+    this.eventBus.publish("wiz:discovered", { count: lights.length, lights });
+  }
+
   // 💡 絕對穩定關鍵：背景重連機制
   _startHealthCheck() {
     if (this._reconnectTimer) return;
 
     this._reconnectTimer = setInterval(async () => {
+      // 如果沒有任何 Wiz 燈泡在線，重新掃描
+      const hasWiz = [...this.devices.values()].some((d) => d instanceof WizLightDevice);
+      if (!hasWiz) {
+        await this._discoverWizLights();
+      }
+
       for (const [id, device] of this.devices) {
         // 如果裝置狀態不是 online，就嘗試重新調用 init()
         const status = device.getStatus();

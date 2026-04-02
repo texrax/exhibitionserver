@@ -545,10 +545,8 @@
 
       <div class="wiz-section">
         <h4>Target</h4>
-        <div class="wiz-target-group">
+        <div class="wiz-target-group" id="wizTargetGroup">
           <button class="wiz-btn wiz-target active" data-target="all" onclick="wizSetTarget('all')">All</button>
-          <button class="wiz-btn wiz-target" data-target="wizlight_1" onclick="wizSetTarget('wizlight_1')">Light 1</button>
-          <button class="wiz-btn wiz-target" data-target="wizlight_2" onclick="wizSetTarget('wizlight_2')">Light 2</button>
         </div>
       </div>
 
@@ -563,7 +561,7 @@
       <div class="wiz-section">
         <h4>Brightness</h4>
         <div class="wiz-slider-row">
-          <input type="range" id="wizBrightness" min="10" max="100" value="100"
+          <input type="range" id="wizBrSlider" min="10" max="100" value="100"
                  oninput="document.getElementById('wizBrVal').textContent=this.value"
                  onchange="wizBrightness(this.value)">
           <span class="wiz-val" id="wizBrVal">100</span>

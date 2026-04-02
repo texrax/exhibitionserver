@@ -12,12 +12,12 @@
       }
     },
     {
-     "id": "esp32_main",
-  "type": "ESP32Device",
-  "config": {
-    "ip": "192.168.31.101", 
-    "timeout": 3000,
-    "throttleMs": 150
+      "id": "esp32_main",
+      "type": "ESP32Device",
+      "config": {
+        "ip": "192.168.31.101",
+        "timeout": 3000,
+        "throttleMs": 150
       }
     },
     {
@@ -43,24 +43,6 @@
         "pollIntervalMs": 500,
         "cooldownMs": 3000,
         "timeout": 3000
-      }
-    },
-    {
-      "id": "wizlight_1",
-      "type": "WizLightDevice",
-      "config": {
-        "ip": "192.168.0.127",
-        "port": 38899,
-        "timeout": 2000
-      }
-    },
-    {
-      "id": "wizlight_2",
-      "type": "WizLightDevice",
-      "config": {
-        "ip": "192.168.0.129",
-        "port": 38899,
-        "timeout": 2000
       }
     }
   ]

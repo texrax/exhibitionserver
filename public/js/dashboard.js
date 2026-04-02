@@ -107,6 +107,7 @@
   // ==================================================
 
   function renderDevices(devices) {
+    updateWizTargets(devices);
     if (devices.length === 0 && isCloudMode) {
       deviceList.innerHTML = '<div style="padding:12px;color:var(--text-dim);font-size:13px;">等待展場 Bridge 連線...</div>';
       return;
@@ -255,10 +256,26 @@
     }
   });
 
-  // ---- Wiz Light 多燈控制 ----
+  // ---- Wiz Light 多燈控制（自動掃描） ----
 
-  const WIZ_IDS = ["wizlight_1", "wizlight_2"];
-  let wizTarget = "all"; // "all" | "wizlight_1" | "wizlight_2"
+  let wizIds = [];
+  let wizTarget = "all";
+
+  function updateWizTargets(devices) {
+    const ids = devices.filter((d) => d.type === "WizLightDevice").map((d) => d.id);
+    if (ids.length === wizIds.length && ids.every((id, i) => id === wizIds[i])) return;
+    wizIds = ids;
+
+    const group = document.getElementById("wizTargetGroup");
+    if (!group) return;
+    group.innerHTML = '<button class="wiz-btn wiz-target active" data-target="all" onclick="wizSetTarget(\'all\')">All</button>';
+    ids.forEach((id, i) => {
+      group.innerHTML += `<button class="wiz-btn wiz-target" data-target="${id}" onclick="wizSetTarget('${id}')">L${i + 1}</button>`;
+    });
+
+    // 更新狀態欄
+    updateWizStatusBar();
+  }
 
   window.wizSetTarget = function (target) {
     wizTarget = target;
@@ -268,11 +285,8 @@
   };
 
   function wizExec(action, params) {
-    if (wizTarget === "all") {
-      WIZ_IDS.forEach((id) => executeDevice(id, action, params));
-    } else {
-      executeDevice(wizTarget, action, params);
-    }
+    const targets = wizTarget === "all" ? wizIds : [wizTarget];
+    targets.forEach((id) => executeDevice(id, action, params));
   }
 
   // 狀態更新
@@ -280,12 +294,16 @@
   function updateWizStatus(data, event) {
     const id = event?.replace(":status", "") || "";
     if (id) wizStatuses[id] = data;
+    updateWizStatusBar();
+  }
+
+  function updateWizStatusBar() {
     const bar = document.getElementById("wizStatusBar");
     if (!bar) return;
-    bar.textContent = WIZ_IDS.map((id) => {
+    if (wizIds.length === 0) { bar.textContent = "Scanning..."; return; }
+    bar.textContent = wizIds.map((id, i) => {
       const s = wizStatuses[id];
-      const label = id.replace("wizlight_", "L");
-      return s ? `${label}: ${s.status}` : `${label}: --`;
+      return s ? `L${i + 1}: ${s.status}` : `L${i + 1}: --`;
     }).join(" | ");
   }
 
@@ -301,12 +319,12 @@
     const r = parseInt(hex.slice(1, 3), 16);
     const g = parseInt(hex.slice(3, 5), 16);
     const b = parseInt(hex.slice(5, 7), 16);
-    const brightness = Number(document.getElementById("wizBrightness").value);
+    const brightness = Number(document.getElementById("wizBrSlider").value);
     wizExec("setColor", { r, g, b, brightness });
   };
 
   window.wizTemp = function (temp) {
-    const brightness = Number(document.getElementById("wizBrightness").value);
+    const brightness = Number(document.getElementById("wizBrSlider").value);
     wizExec("setTemp", { temp, brightness });
   };
 
