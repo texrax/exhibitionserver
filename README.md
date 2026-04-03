@@ -291,6 +291,13 @@ cd yolo && python3 -m venv venv && ./venv/bin/pip install -r requirements.txt
 
 `env.CAMERA_SOURCE` 可設為手機 IP Camera 的串流 URL（如 `http://192.168.x.x:8080/video`），預設 `"0"` 為電腦攝影機。
 
+#### YoloTD 效能調校環境變數
+
+| 環境變數 | 預設值 | 說明 |
+|----------|--------|------|
+| `DETECT_EVERY_N` | `3` | 每 N 幀執行一次推論，中間幀重用上次結果 |
+| `JPEG_QUALITY` | `70` | video_feed JPEG 壓縮品質 (1-100) |
+
 ### arduino ide設定
 
 #include <WiFi.h>
