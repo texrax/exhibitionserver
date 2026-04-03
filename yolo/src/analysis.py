@@ -1,6 +1,11 @@
 """
 餐桌互動事件分析模組
 固定雙人、雙碗、上方鏡頭場景
+
+夾取偵測策略：
+  food model 偵測的是盤子上的食物堆，不是筷子尖端夾住的食物。
+  因此改用「區域觸碰」判定：筷子中心進入食物 bbox → 視為夾取，
+  之後追蹤筷子移動，進入碗區 → deliver，超時 → drop/abort。
 """
 
 from __future__ import annotations
@@ -22,10 +27,12 @@ class ObjectAnalyzer:
 
         self.scene_config = scene_config or {}
         self.event_config = {
+            "food_bbox_padding": 40,
             "attach_distance": 95.0,
             "release_distance": 125.0,
             "attach_frames": 3,
             "release_frames": 3,
+            "carry_timeout_frames": 90,
             "food_memory_frames": 30,
             "cooldown_frames": 18,
             "event_display_frames": 45,
@@ -171,12 +178,41 @@ class ObjectAnalyzer:
         }
         return scene
 
+    # ------------------------------------------------------------------
+    # 核心：區域觸碰式夾取偵測
+    # ------------------------------------------------------------------
+
+    def _chopsticks_touching_food(
+        self, chopsticks: Optional[Dict[str, Any]], foods: List[Dict[str, Any]]
+    ) -> Optional[Dict[str, Any]]:
+        """筷子中心是否在某個食物的 bbox（加 padding）內？"""
+        if not chopsticks or not foods:
+            return None
+        cp = chopsticks["center"]
+        pad = int(self.event_config.get("food_bbox_padding", 40))
+        best = None
+        best_dist = float("inf")
+        for food in foods:
+            bbox = food["bbox"]
+            if (bbox["x1"] - pad <= cp["x"] <= bbox["x2"] + pad and
+                    bbox["y1"] - pad <= cp["y"] <= bbox["y2"] + pad):
+                dist = self._distance_points(cp, food["center"])
+                if dist < best_dist:
+                    best_dist = dist
+                    best = food
+        return best
+
     def _analyze_event_state(self, detections: List[Dict[str, Any]], scene: Dict[str, Any]) -> List[Dict[str, Any]]:
         if self.last_completed_event and self.frame_index - self.last_completed_event.get("frame_completed", 0) > self.event_config["event_display_frames"]:
             self.last_completed_event = None
 
         chopsticks = self._select_primary_chopsticks(detections)
         foods = [d for d in detections if d["label"] in self.CARRIABLE_FOODS]
+
+        # === DEBUG: 每 10 幀印出狀態 ===
+        if self.frame_index % 10 == 0:
+            touching = self._chopsticks_touching_food(chopsticks, foods)
+            print(f"[DEBUG F{self.frame_index}] 筷子={'有' if chopsticks else '無'} | 食物={[f['label'] for f in foods]} | 觸碰={touching['label'] if touching else '無'} | active={'有' if self.active_event else '無'} | pending={self.pending_pickup['frames'] if self.pending_pickup else 0}", flush=True)
 
         if self.active_event:
             self._advance_active_event(chopsticks, foods, scene)
@@ -195,7 +231,7 @@ class ObjectAnalyzer:
         if not chopsticks:
             return []
 
-        food = self._find_attached_food(chopsticks, [d for d in detections if d["label"] in self.CARRIABLE_FOODS], None)
+        food = self._chopsticks_touching_food(chopsticks, [d for d in detections if d["label"] in self.CARRIABLE_FOODS])
         source_side = self._classify_side(chopsticks["center"], scene)
         event = {
             "event_id": 0,
@@ -226,7 +262,8 @@ class ObjectAnalyzer:
             self.pending_pickup = None
             return
 
-        food = self._find_attached_food(chopsticks, foods, None)
+        # 用 bbox 觸碰判定取代距離判定
+        food = self._chopsticks_touching_food(chopsticks, foods)
         if not food:
             self.pending_pickup = None
             return
@@ -241,6 +278,7 @@ class ObjectAnalyzer:
         if self.pending_pickup["frames"] >= self.event_config["attach_frames"]:
             target_side = self._other_side(source_side)
             source_bowl = self._which_bowl(food["center"], scene)
+            print(f"[PICKUP] 夾取觸發！{food['label']} ({source_side}側) | 筷子({chopsticks['center']['x']},{chopsticks['center']['y']}) 進入食物bbox", flush=True)
             self.active_event = {
                 "event_id": self.next_event_id,
                 "frame_started": self.frame_index,
@@ -261,6 +299,7 @@ class ObjectAnalyzer:
                 "target_food": food["label"],
                 "carried_food": food["label"],
                 "carried_food_track_id": food.get("track_id"),
+                "source_food_bbox": dict(food["bbox"]),
                 "last_food_center": dict(food["center"]),
                 "last_chopsticks_center": dict(chopsticks["center"]),
                 "distances": self._build_distance_summary(chopsticks, food, scene),
@@ -268,6 +307,7 @@ class ObjectAnalyzer:
                 "release_frames": 0,
                 "food_missing_frames": 0,
                 "idle_frames": 0,
+                "carry_frames": 0,
                 "entered_target_bowl": 0,
             }
             self.next_event_id += 1
@@ -277,54 +317,57 @@ class ObjectAnalyzer:
         assert self.active_event is not None
         event = self.active_event
 
-        if chopsticks:
-            event["camera_position"] = dict(chopsticks["center"])
-            event["coords"] = dict(chopsticks["center"])
-            event["last_chopsticks_center"] = dict(chopsticks["center"])
-            event["target_person"] = self._person_track_id_for_side(event["target_side"], scene)
-        else:
+        if not chopsticks:
             event["idle_frames"] += 1
-
-        food = self._find_attached_food(chopsticks, foods, event)
-        if food:
-            event["carried_food"] = food["label"]
-            event["target_food"] = food["label"]
-            event["carried_food_track_id"] = food.get("track_id")
-            event["last_food_center"] = dict(food["center"])
-            event["distances"] = self._build_distance_summary(chopsticks, food, scene)
-            event["release_frames"] = 0
-            event["food_missing_frames"] = 0
-            event["idle_frames"] = 0
-            event["state"] = "moving_to_target" if self._classify_side(chopsticks["center"], scene) != event["source_side"] else "holding_food"
-            event["action"] = "carrying"
-            if self._which_bowl(food["center"], scene) is not None:
-                event["entered_target_bowl"] += 1
-        else:
-            event["food_missing_frames"] = event.get("food_missing_frames", 0) + 1
-            if chopsticks and event.get("carried_food") and event["food_missing_frames"] <= self.event_config["food_memory_frames"]:
-                remembered_center = dict(chopsticks["center"])
-                event["last_food_center"] = remembered_center
-                event["distances"] = self._build_distance_summary(chopsticks, {"center": remembered_center}, scene)
-                event["state"] = "moving_to_target" if self._classify_side(chopsticks["center"], scene) != event["source_side"] else "holding_food"
-                event["action"] = "carrying"
-                event["idle_frames"] = 0
-                event["release_frames"] = 0
-                in_bowl = self._which_bowl(chopsticks["center"], scene)
-                if in_bowl is not None:
-                    event["entered_target_bowl"] += 1
-                print(f"[STATE] 食物記憶中 ({event['food_missing_frames']}/{self.event_config['food_memory_frames']}) | 筷子位置=({chopsticks['center']['x']},{chopsticks['center']['y']}) | 碗區={in_bowl or '無'}", flush=True)
-            else:
-                event["release_frames"] += 1
-                print(f"[STATE] 食物記憶過期，釋放中 ({event['release_frames']}/{self.event_config['release_frames']})", flush=True)
-                if chopsticks:
-                    event["distances"] = self._build_distance_summary(chopsticks, None, scene)
-
-        if event["release_frames"] >= self.event_config["release_frames"]:
-            self._complete_active_event(scene)
+            if event["idle_frames"] >= self.event_config["max_idle_frames"]:
+                print(f"[ABORT] 筷子消失太久，中止事件", flush=True)
+                self._finish_event("abort", success=False, scene=scene)
             return
 
-        if event["idle_frames"] >= self.event_config["max_idle_frames"]:
-            self._finish_event("abort", success=False, scene=scene)
+        # 更新筷子位置
+        event["camera_position"] = dict(chopsticks["center"])
+        event["coords"] = dict(chopsticks["center"])
+        event["last_chopsticks_center"] = dict(chopsticks["center"])
+        event["last_food_center"] = dict(chopsticks["center"])  # 食物跟著筷子
+        event["target_person"] = self._person_track_id_for_side(event["target_side"], scene)
+        event["idle_frames"] = 0
+        event["carry_frames"] = event.get("carry_frames", 0) + 1
+
+        # 檢查筷子是否還在食物源 bbox 內（還沒離開食物堆）
+        source_bbox = event.get("source_food_bbox")
+        pad = int(self.event_config.get("food_bbox_padding", 40))
+        still_in_food = False
+        if source_bbox:
+            cp = chopsticks["center"]
+            still_in_food = (source_bbox["x1"] - pad <= cp["x"] <= source_bbox["x2"] + pad and
+                             source_bbox["y1"] - pad <= cp["y"] <= source_bbox["y2"] + pad)
+
+        if still_in_food:
+            event["state"] = "holding_food"
+            event["action"] = "pickup"
+            event["distances"] = self._build_distance_summary(chopsticks, None, scene)
+            return
+
+        # 筷子已離開食物區域 → 正在搬運
+        event["state"] = "moving_to_target"
+        event["action"] = "carrying"
+
+        # 檢查是否進入碗區
+        in_bowl = self._which_bowl(chopsticks["center"], scene)
+        if in_bowl is not None:
+            event["entered_target_bowl"] += 1
+            print(f"[DELIVER] 筷子進入 {in_bowl}！food={event['carried_food']} | 位置=({chopsticks['center']['x']},{chopsticks['center']['y']})", flush=True)
+            self._finish_event("deliver", success=True, scene=scene)
+            return
+
+        # 超時檢查
+        carry_timeout = int(self.event_config.get("carry_timeout_frames", 90))
+        if event["carry_frames"] >= carry_timeout:
+            print(f"[DROP] 搬運超時 ({carry_timeout} frames)，判定掉落", flush=True)
+            self._finish_event("drop", success=False, scene=scene)
+            return
+
+        event["distances"] = self._build_distance_summary(chopsticks, None, scene)
 
     def _complete_active_event(self, scene: Dict[str, Any]) -> None:
         assert self.active_event is not None
@@ -362,6 +405,9 @@ class ObjectAnalyzer:
         data["completed"] = completed
         data["target_person"] = self._person_track_id_for_side(data.get("target_side"), scene)
         data.setdefault("target_food", data.get("carried_food"))
+        # 移除內部欄位
+        data.pop("source_food_bbox", None)
+        data.pop("carry_frames", None)
         return data
 
     def _serialize_scene(self, scene: Dict[str, Any]) -> Dict[str, Any]:

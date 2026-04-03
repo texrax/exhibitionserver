@@ -305,8 +305,14 @@ def video_loop() -> None:
     print(f"[Camera] CAMERA_SOURCE={camera_source}", flush=True)
     # 支援數字（本機攝影機 index）或 URL（手機 IP Cam / RTSP 串流）
     if camera_source.isdigit():
-        # 用 AVFoundation backend 確保 macOS 上 index 對應正確裝置
-        video_capture = cv2.VideoCapture(int(camera_source), cv2.CAP_AVFOUNDATION)
+        # 根據作業系統選擇正確的攝影機 backend
+        import sys
+        if sys.platform == "darwin":
+            video_capture = cv2.VideoCapture(int(camera_source), cv2.CAP_AVFOUNDATION)
+        elif sys.platform == "win32":
+            video_capture = cv2.VideoCapture(int(camera_source), cv2.CAP_MSMF)
+        else:
+            video_capture = cv2.VideoCapture(int(camera_source))
     else:
         video_capture = cv2.VideoCapture(camera_source)
     print(f"[Camera] opened={video_capture.isOpened()}, backend={video_capture.getBackendName()}", flush=True)
