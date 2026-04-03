@@ -10,7 +10,10 @@ class YoloDetectorDevice extends BaseDevice {
   constructor(id, config, eventBus) {
     super(id, config, eventBus);
     this.projectPath = path.resolve(config.projectPath || "./yolo");
-    this.pythonPath = config.pythonPath || path.join(this.projectPath, "venv", "bin", "python");
+    const venvPython = process.platform === "win32"
+      ? path.join(this.projectPath, "venv", "Scripts", "python.exe")
+      : path.join(this.projectPath, "venv", "bin", "python");
+    this.pythonPath = config.pythonPath || venvPython;
     this.serverEnv = config.env || { YOLO_PROFILE: "y11" };
     this.url = config.url || "http://localhost:8000";
     this.pollIntervalMs = config.pollIntervalMs || 500;
@@ -99,6 +102,13 @@ class YoloDetectorDevice extends BaseDevice {
 
     this._intentionalKill = false;
     this._process = spawn(this.pythonPath, ["server.py"], { cwd, env });
+
+    // spawn 錯誤（例如路徑不存在）
+    this._process.on("error", (err) => {
+      console.error(`[${this.id}] 無法啟動 YoloTD 子程序: ${err.message}`);
+      this._process = null;
+      this._setStatus("error", `無法啟動: ${err.message}`);
+    });
 
     // stdout — 印出 YoloTD log
     this._process.stdout.on("data", (data) => {

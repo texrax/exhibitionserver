@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>展場控制</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --border: #2e3345;
+      --text: #e4e6f0;
+      --text-dim: #8b8fa3;
+      --green: #00d68f;
+      --red: #ff6b6b;
+      --accent: #6c5ce7;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    header h1 { font-size: 18px; font-weight: 600; }
+
+    .conn-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+
+    .conn-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--red);
+      transition: background 0.3s;
+    }
+
+    .conn-dot.connected { background: var(--green); }
+
+    .controls {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 24px;
+      padding: 24px;
+    }
+
+    .btn {
+      width: 100%;
+      max-width: 400px;
+      padding: 48px 24px;
+      border: none;
+      border-radius: 16px;
+      font-size: 28px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.2s;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    .btn:active { transform: scale(0.96); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-start {
+      background: var(--green);
+      color: #0f1117;
+    }
+
+    .btn-reset {
+      background: var(--red);
+      color: #fff;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 500;
+      opacity: 0;
+      transition: transform 0.3s, opacity 0.3s;
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .toast.success { background: var(--green); color: #0f1117; }
+    .toast.error { background: var(--red); color: #fff; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>展場控制</h1>
+    <div class="conn-status">
+      <div class="conn-dot" id="connDot"></div>
+      <span id="connLabel">連線中…</span>
+    </div>
+  </header>
+
+  <div class="controls">
+    <button class="btn btn-start" onclick="trigger('start', '開始')">開始</button>
+    <button class="btn btn-reset" onclick="trigger('all_off', '全部關閉')">全部關閉（重置）</button>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const toast = document.getElementById('toast');
+    let toastTimer;
+
+    function showToast(msg, type) {
+      clearTimeout(toastTimer);
+      toast.textContent = msg;
+      toast.className = 'toast ' + type + ' show';
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+
+    async function trigger(scene, label) {
+      try {
+        const res = await fetch('/api/scenes/' + scene + '/trigger', { method: 'POST' });
+        if (res.ok) {
+          showToast(label + ' — 成功', 'success');
+        } else {
+          const data = await res.json().catch(() => ({}));
+          showToast(label + ' 失敗: ' + (data.error || res.status), 'error');
+        }
+      } catch (e) {
+        showToast('連線失敗', 'error');
+      }
+    }
+
+    // WebSocket connection status
+    const connDot = document.getElementById('connDot');
+    const connLabel = document.getElementById('connLabel');
+    let ws, reconnectTimer;
+
+    function connectWS() {
+      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+      ws = new WebSocket(proto + '://' + location.host + '/ws');
+
+      ws.onopen = () => {
+        connDot.classList.add('connected');
+        connLabel.textContent = '已連線';
+      };
+
+      ws.onclose = () => {
+        connDot.classList.remove('connected');
+        connLabel.textContent = '已斷線';
+        clearTimeout(reconnectTimer);
+        reconnectTimer = setTimeout(connectWS, 3000);
+      };
+
+      ws.onerror = () => ws.close();
+    }
+
+    connectWS();
+  </script>
+</body>
+</html>

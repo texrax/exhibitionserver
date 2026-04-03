@@ -2,6 +2,7 @@
 // 支援自動重連機制，確保展覽期間裝置斷線能自動恢復
 
 const fs = require("fs");
+const path = require("path");
 const deviceTypes = require("../devices");
 const WizLightDevice = require("../devices/WizLightDevice");
 
@@ -48,19 +49,52 @@ class DeviceManager {
   }
 
   /**
-   * 自動掃描區域網路上的 Wiz 燈泡，動態註冊尚未存在的燈泡
-   * MAC 地址作為穩定 ID，不怕 IP 變動
+   * 讀取 config/wizlights.json 設定檔
+   * @returns {Array|null} lights 陣列，檔案不存在或 MAC 未設定回傳 null
+   */
+  _loadWizConfig() {
+    const configPath = path.resolve(__dirname, "../../config/wizlights.json");
+    try {
+      const raw = fs.readFileSync(configPath, "utf-8");
+      const config = JSON.parse(raw);
+      // 如果所有 MAC 都還是 TODO，視為未設定
+      if (!config.lights || config.lights.every((l) => l.mac === "TODO")) return null;
+      return config.lights;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * 自動掃描區域網路上的 Wiz 燈泡
+   * 若 config/wizlights.json 存在且 MAC 已填入，依設定固定身份註冊
+   * 否則 fallback 舊邏輯（依 MAC 排序）
    */
   async _discoverWizLights() {
     console.log("[DeviceManager] 🔍 掃描 Wiz 燈泡...");
-    const lights = await WizLightDevice.discover(3000);
 
-    if (lights.length === 0) {
+    // 多輪掃描取聯集
+    let allFound = new Map(); // MAC → { ip, mac, state }
+    let prevCount = -1;
+
+    for (let round = 0; round < 3; round++) {
+      const lights = await WizLightDevice.discover(3000);
+      for (const light of lights) {
+        allFound.set(light.mac, light);
+      }
+      console.log(`[DeviceManager] 掃描第 ${round + 1} 輪：本輪 ${lights.length} 顆，累計 ${allFound.size} 顆`);
+      if (allFound.size === prevCount && allFound.size > 0) break;
+      prevCount = allFound.size;
+    }
+
+    const mergedLights = [...allFound.values()];
+
+    if (mergedLights.length === 0) {
       console.log("[DeviceManager] 未發現 Wiz 燈泡");
       return;
     }
 
-    // 移除 config 裡寫死的 WizLightDevice（用自動掃描取代）
+    // 移除已註冊的 WizLightDevice
     for (const [id, device] of this.devices) {
       if (device instanceof WizLightDevice) {
         await device.destroy();
@@ -68,16 +102,49 @@ class DeviceManager {
       }
     }
 
-    // 依 MAC 排序後依序註冊 wizlight_1, wizlight_2, ...
-    lights.sort((a, b) => a.mac.localeCompare(b.mac));
-    for (let i = 0; i < lights.length; i++) {
-      const { ip, mac } = lights[i];
-      const id = `wizlight_${i + 1}`;
-      console.log(`[DeviceManager] 💡 發現 Wiz: ${id} → ${ip} (MAC: ${mac})`);
-      await this.register(id, "WizLightDevice", { ip, port: 38899, timeout: 2000 });
+    const wizConfig = this._loadWizConfig();
+
+    if (wizConfig) {
+      // === 固定身份模式 ===
+      const foundByMac = new Map(mergedLights.map((l) => [l.mac, l]));
+      let unknownIdx = 0;
+
+      // 註冊 config 裡的燈
+      for (const entry of wizConfig) {
+        const light = foundByMac.get(entry.mac);
+        if (light) {
+          console.log(`[DeviceManager] 💡 ${entry.id} (${entry.label || entry.id}) → ${light.ip} (MAC: ${entry.mac}, group: ${entry.group})`);
+          await this.register(entry.id, "WizLightDevice", {
+            ip: light.ip, port: 38899, timeout: 2000,
+            mac: entry.mac, group: entry.group, label: entry.label, canChangeColor: entry.canChangeColor,
+          });
+          foundByMac.delete(entry.mac);
+        } else {
+          console.warn(`[DeviceManager] ⚠️ config 中的 ${entry.id} (MAC: ${entry.mac}) 未掃到`);
+        }
+      }
+
+      // 掃到但不在 config 裡的燈 → fallback
+      for (const [mac, light] of foundByMac) {
+        unknownIdx++;
+        const id = `wizlight_unknown_${unknownIdx}`;
+        console.warn(`[DeviceManager] ⚠️ 未知燈泡: ${id} → ${light.ip} (MAC: ${mac})`);
+        await this.register(id, "WizLightDevice", {
+          ip: light.ip, port: 38899, timeout: 2000, mac,
+        });
+      }
+    } else {
+      // === Fallback：舊邏輯，依 MAC 排序 ===
+      mergedLights.sort((a, b) => a.mac.localeCompare(b.mac));
+      for (let i = 0; i < mergedLights.length; i++) {
+        const { ip, mac } = mergedLights[i];
+        const id = `wizlight_${i + 1}`;
+        console.log(`[DeviceManager] 💡 發現 Wiz: ${id} → ${ip} (MAC: ${mac})`);
+        await this.register(id, "WizLightDevice", { ip, port: 38899, timeout: 2000, mac });
+      }
     }
 
-    this.eventBus.publish("wiz:discovered", { count: lights.length, lights });
+    this.eventBus.publish("wiz:discovered", { count: mergedLights.length, lights: mergedLights });
   }
 
   // 💡 絕對穩定關鍵：背景重連機制
@@ -85,9 +152,10 @@ class DeviceManager {
     if (this._reconnectTimer) return;
 
     this._reconnectTimer = setInterval(async () => {
-      // 如果沒有任何 Wiz 燈泡在線，重新掃描
-      const hasWiz = [...this.devices.values()].some((d) => d instanceof WizLightDevice);
-      if (!hasWiz) {
+      // 如果有 Wiz 燈泡離線或完全沒有，重新掃描補齊
+      const wizDevices = [...this.devices.values()].filter((d) => d instanceof WizLightDevice);
+      const allOnline = wizDevices.every((d) => d.getStatus().status === "online");
+      if (wizDevices.length === 0 || !allOnline) {
         await this._discoverWizLights();
       }
 
@@ -111,32 +179,45 @@ class DeviceManager {
   }
 
   async executeOnDevice(deviceId, action, params = {}) {
-    // WiZ 群組指令：廣播到所有已發現的 WiZ 燈泡
-    if (deviceId === "wizlight_all") {
-      return this._executeOnAllWiz(action, params);
+    // WiZ 群組指令
+    const wizGroupMap = {
+      wizlight_all: null,
+      wizlight_spotlights: "spotlights",
+      wizlight_bulbs: "bulbs",
+    };
+
+    if (deviceId in wizGroupMap) {
+      return this._executeOnWizGroup(wizGroupMap[deviceId], action, params);
     }
 
     const device = this.devices.get(deviceId);
     if (!device) throw new Error(`裝置 "${deviceId}" 不存在`);
-    
+
     // 💡 穩定性檢查：如果裝置目前斷線，執行前先噴警告
     if (device.getStatus().status !== "online") {
       console.warn(`[DeviceManager] ⚠️ 嘗試對離線裝置 ${deviceId} 執行動作，可能會失敗`);
     }
-    
+
     return device.execute(action, params);
   }
 
-  async _executeOnAllWiz(action, params) {
+  /**
+   * 對指定群組的 Wiz 燈泡執行動作
+   * @param {string|null} group - 群組名稱，null 表示全部
+   */
+  async _executeOnWizGroup(group, action, params) {
     const wizDevices = [...this.devices.entries()]
-      .filter(([, d]) => d instanceof WizLightDevice);
+      .filter(([, d]) => d instanceof WizLightDevice)
+      .filter(([, d]) => group === null || d.group === group);
+
+    const label = group ? `wizlight_${group}` : "wizlight_all";
 
     if (wizDevices.length === 0) {
-      console.warn("[DeviceManager] ⚠️ 沒有已連線的 Wiz 燈泡");
+      console.warn(`[DeviceManager] ⚠️ 群組 ${label} 沒有已連線的 Wiz 燈泡`);
       return [];
     }
 
-    console.log(`[DeviceManager] 💡 wizlight_all → ${action} (${wizDevices.length} 顆燈)`);
+    console.log(`[DeviceManager] 💡 ${label} → ${action} (${wizDevices.length} 顆燈)`);
     const results = await Promise.allSettled(
       wizDevices.map(([, device]) => device.execute(action, params))
     );

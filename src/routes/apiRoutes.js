@@ -2,6 +2,7 @@
 // 同時保留與原 TouchLightServer 的向下相容端點
 
 const express = require("express");
+const WizLightDevice = require("../devices/WizLightDevice");
 
 /**
  * @param {DeviceManager} deviceManager
@@ -43,6 +44,19 @@ function createApiRoutes(deviceManager, eventBus) {
       res.json({ status: "ok", result });
     } catch (err) {
       res.status(500).json({ status: "error", error: err.message });
+    }
+  });
+
+  // ==============================================
+  //  Wiz 燈泡掃描 API
+  // ==============================================
+
+  router.get("/wiz/scan", async (req, res) => {
+    try {
+      const lights = await WizLightDevice.discover(4000, 3);
+      res.json({ count: lights.length, lights });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
     }
   });
 

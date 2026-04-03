@@ -86,7 +86,9 @@
         if (msg.payload.event === "bridge:devicesRegistered") requestStatus();
         if (msg.payload.event.endsWith(":status")) {
           requestStatus();
-          if (msg.payload.event.startsWith("wizlight_")) updateWizStatus(msg.payload.data, msg.payload.event);
+          // 偵測所有 Wiz 燈泡的狀態事件（spotlight_*, bulb_*, wizlight_*）
+          const evtId = msg.payload.event.replace(":status", "");
+          if (wizIds.includes(evtId)) updateWizStatus(msg.payload.data, msg.payload.event);
         }
         break;
       case "status":
@@ -260,20 +262,37 @@
 
   let wizIds = [];
   let wizTarget = "all";
+  const wizMeta = {}; // id → device metadata
 
   function updateWizTargets(devices) {
-    const ids = devices.filter((d) => d.type === "WizLightDevice").map((d) => d.id);
+    const wizDevices = devices.filter((d) => d.type === "WizLightDevice");
+    const ids = wizDevices.map((d) => d.id);
     if (ids.length === wizIds.length && ids.every((id, i) => id === wizIds[i])) return;
     wizIds = ids;
 
+    // 快取每顆燈的 metadata
+    wizDevices.forEach((d) => { wizMeta[d.id] = d; });
+
     const group = document.getElementById("wizTargetGroup");
     if (!group) return;
-    group.innerHTML = '<button class="wiz-btn wiz-target active" data-target="all" onclick="wizSetTarget(\'all\')">All</button>';
-    ids.forEach((id, i) => {
-      group.innerHTML += `<button class="wiz-btn wiz-target" data-target="${id}" onclick="wizSetTarget('${id}')">L${i + 1}</button>`;
+
+    // 全部按鈕
+    let html = '<button class="wiz-btn wiz-target active" data-target="all" onclick="wizSetTarget(\'all\')">全部</button>';
+
+    // 分組按鈕
+    const hasSpotlights = wizDevices.some((d) => d.group === "spotlights");
+    const hasBulbs = wizDevices.some((d) => d.group === "bulbs");
+    if (hasSpotlights) html += '<button class="wiz-btn wiz-target" data-target="spotlights" onclick="wizSetTarget(\'spotlights\')">聚光燈</button>';
+    if (hasBulbs) html += '<button class="wiz-btn wiz-target" data-target="bulbs" onclick="wizSetTarget(\'bulbs\')">壁燈/掛燈</button>';
+
+    // 個別燈泡按鈕（用 label 顯示中文名稱）
+    ids.forEach((id) => {
+      const meta = wizMeta[id];
+      const label = (meta && meta.label) || id;
+      html += `<button class="wiz-btn wiz-target" data-target="${id}" onclick="wizSetTarget('${id}')">${label}</button>`;
     });
 
-    // 更新狀態欄
+    group.innerHTML = html;
     updateWizStatusBar();
   }
 
@@ -285,8 +304,16 @@
   };
 
   function wizExec(action, params) {
-    const targets = wizTarget === "all" ? wizIds : [wizTarget];
-    targets.forEach((id) => executeDevice(id, action, params));
+    // 分組目標交由 server 處理
+    if (wizTarget === "all") {
+      executeDevice("wizlight_all", action, params);
+    } else if (wizTarget === "spotlights") {
+      executeDevice("wizlight_spotlights", action, params);
+    } else if (wizTarget === "bulbs") {
+      executeDevice("wizlight_bulbs", action, params);
+    } else {
+      executeDevice(wizTarget, action, params);
+    }
   }
 
   // 狀態更新
@@ -300,10 +327,12 @@
   function updateWizStatusBar() {
     const bar = document.getElementById("wizStatusBar");
     if (!bar) return;
-    if (wizIds.length === 0) { bar.textContent = "Scanning..."; return; }
-    bar.textContent = wizIds.map((id, i) => {
+    if (wizIds.length === 0) { bar.textContent = "掃描中..."; return; }
+    bar.textContent = wizIds.map((id) => {
       const s = wizStatuses[id];
-      return s ? `L${i + 1}: ${s.status}` : `L${i + 1}: --`;
+      const meta = wizMeta[id];
+      const label = (meta && meta.label) || id;
+      return s ? `${label}: ${s.status}` : `${label}: --`;
     }).join(" | ");
   }
 
