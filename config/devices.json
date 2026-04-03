@@ -39,10 +39,18 @@
       "id": "yolo_detector",
       "type": "YoloDetectorDevice",
       "config": {
+        "projectPath": "./yolo",
+        "env": {
+          "YOLO_PROFILE": "y11",
+          "CAMERA_SOURCE": "0",
+          "CHOPSTICKS_MODEL_Y11": "models/chopsticks.pt",
+          "FOOD_MODEL_Y11": "models/food.pt",
+          "BOWL_MODEL_Y11": "models/bowl.pt"
+        },
         "url": "http://localhost:8000",
         "pollIntervalMs": 500,
         "cooldownMs": 3000,
-        "timeout": 3000
+        "startupTimeoutMs": 15000
       }
     }
   ]

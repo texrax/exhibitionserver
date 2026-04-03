@@ -111,6 +111,11 @@ class DeviceManager {
   }
 
   async executeOnDevice(deviceId, action, params = {}) {
+    // WiZ 群組指令：廣播到所有已發現的 WiZ 燈泡
+    if (deviceId === "wizlight_all") {
+      return this._executeOnAllWiz(action, params);
+    }
+
     const device = this.devices.get(deviceId);
     if (!device) throw new Error(`裝置 "${deviceId}" 不存在`);
     
@@ -120,6 +125,22 @@ class DeviceManager {
     }
     
     return device.execute(action, params);
+  }
+
+  async _executeOnAllWiz(action, params) {
+    const wizDevices = [...this.devices.entries()]
+      .filter(([, d]) => d instanceof WizLightDevice);
+
+    if (wizDevices.length === 0) {
+      console.warn("[DeviceManager] ⚠️ 沒有已連線的 Wiz 燈泡");
+      return [];
+    }
+
+    console.log(`[DeviceManager] 💡 wizlight_all → ${action} (${wizDevices.length} 顆燈)`);
+    const results = await Promise.allSettled(
+      wizDevices.map(([, device]) => device.execute(action, params))
+    );
+    return results;
   }
 
   getAllStatus() {

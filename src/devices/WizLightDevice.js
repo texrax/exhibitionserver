@@ -9,6 +9,7 @@ class WizLightDevice extends BaseDevice {
     this.port = config.port || 38899;
     this.timeout = config.timeout || 2000;
     this._state = {};
+    this._flickerTimer = null;
   }
 
   async init() {
@@ -38,7 +39,16 @@ class WizLightDevice extends BaseDevice {
             g: params.g || 0,
             b: params.b || 0,
             dimming: params.brightness ?? 100,
+            ...(params.speed != null && { speed: params.speed }),
           });
+          break;
+        case "flickerEffect":
+          this._startFlickerEffect(params);
+          res = { success: true };
+          break;
+        case "stopEffect":
+          this._stopEffect();
+          res = { success: true };
           break;
         case "setTemp":
           res = await this._send("setPilot", {
@@ -79,6 +89,8 @@ class WizLightDevice extends BaseDevice {
       { action: "setBrightness", params: { brightness: 100 }, description: "設定亮度" },
       { action: "setScene", params: { sceneId: 1 }, description: "設定內建場景" },
       { action: "getState", params: {}, description: "查詢燈泡狀態" },
+      { action: "flickerEffect", params: { r: 130, g: 10, b: 220, min: 30, max: 70 }, description: "不規則故障閃爍" },
+      { action: "stopEffect", params: {}, description: "停止閃爍效果" },
     ];
   }
 
@@ -87,6 +99,29 @@ class WizLightDevice extends BaseDevice {
       ...super.getStatus(),
       wizState: this._state,
     };
+  }
+
+  /** 不規則閃爍效果 — 遞迴 setTimeout 產生隨機延遲 */
+  _startFlickerEffect({ r = 130, g = 10, b = 220, min = 30, max = 70 }) {
+    this._stopEffect();
+    const flicker = async () => {
+      const brightness = min + Math.random() * (max - min);
+      try {
+        await this._send("setPilot", {
+          r, g, b, dimming: Math.round(brightness),
+        });
+      } catch (e) { /* 閃爍失敗靜默忽略 */ }
+      const nextDelay = 200 + Math.random() * 600;
+      this._flickerTimer = setTimeout(flicker, nextDelay);
+    };
+    flicker();
+  }
+
+  _stopEffect() {
+    if (this._flickerTimer) {
+      clearTimeout(this._flickerTimer);
+      this._flickerTimer = null;
+    }
   }
 
   /** UDP 通訊核心 */
@@ -127,6 +162,7 @@ class WizLightDevice extends BaseDevice {
   }
 
   async destroy() {
+    this._stopEffect();
     await super.destroy();
   }
 
