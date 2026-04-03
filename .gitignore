@@ -3,4 +3,3 @@ config/vts_token.txt
 *.log
 .env
 yolo/venv/
-yolo/models/*.pt
