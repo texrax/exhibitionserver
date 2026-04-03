@@ -95,7 +95,7 @@ class YoloDetectorDevice extends BaseDevice {
     const env = { ...process.env, ...this.serverEnv };
 
     console.log(`[${this.id}] 啟動 YoloTD: ${this.pythonPath} server.py`);
-    console.log(`[${this.id}] cwd: ${cwd}`);
+    console.log(`[${this.id}] cwd: ${cwd} | CAMERA_SOURCE=${env.CAMERA_SOURCE}`);
 
     this._intentionalKill = false;
     this._process = spawn(this.pythonPath, ["server.py"], { cwd, env });

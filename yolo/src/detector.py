@@ -32,9 +32,8 @@ class ObjectDetector:
         self.colors = {}
         self.model_profile = model_profile
 
-        # 定義我們要保留的通用模型類別 (COCO ID)
-        # 0: person, 45: bowl
-        self.ALLOWED_COCO_CLASSES = [0, 45]
+        # 通用模型不偵測任何 COCO 類別（person/bowl 均移除）
+        self.ALLOWED_COCO_CLASSES = []
 
         paths = [model_path] if isinstance(model_path, str) else model_path
         input_roles = model_roles[:] if model_roles else self._default_roles(len(paths))
@@ -58,8 +57,8 @@ class ObjectDetector:
         self.models = loaded_models
         self.model_roles = loaded_roles
         if "bowl" in self.model_roles:
-            # 獨立 bowl 模型啟用時，通用模型只保留 person，避免重複 bowl 框。
-            self.ALLOWED_COCO_CLASSES = [0]
+            # 獨立 bowl 模型啟用時，通用模型無需偵測任何類別
+            self.ALLOWED_COCO_CLASSES = []
 
         if self.model_roles and self.model_roles[0] != "general":
             print("[WARN] 第一個成功載入的模型不是 general，偵測可能不正確")
@@ -331,7 +330,8 @@ class ObjectDetector:
         bowl_conf = conf_threshold if bowl_conf_threshold is None else bowl_conf_threshold
         h_img, w_img = image.shape[:2]
 
-        global_id_counter = self._append_general_detections(
+        if self.ALLOWED_COCO_CLASSES:
+            global_id_counter = self._append_general_detections(
                 image=image,
                 conf_threshold=conf_threshold,
                 all_detections=all_detections,

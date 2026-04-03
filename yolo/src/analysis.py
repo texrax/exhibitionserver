@@ -26,7 +26,7 @@ class ObjectAnalyzer:
             "release_distance": 125.0,
             "attach_frames": 3,
             "release_frames": 3,
-            "food_memory_frames": 8,
+            "food_memory_frames": 30,
             "cooldown_frames": 18,
             "event_display_frames": 45,
             "max_idle_frames": 12,
@@ -309,10 +309,13 @@ class ObjectAnalyzer:
                 event["action"] = "carrying"
                 event["idle_frames"] = 0
                 event["release_frames"] = 0
-                if self._which_bowl(chopsticks["center"], scene) is not None:
+                in_bowl = self._which_bowl(chopsticks["center"], scene)
+                if in_bowl is not None:
                     event["entered_target_bowl"] += 1
+                print(f"[STATE] 食物記憶中 ({event['food_missing_frames']}/{self.event_config['food_memory_frames']}) | 筷子位置=({chopsticks['center']['x']},{chopsticks['center']['y']}) | 碗區={in_bowl or '無'}", flush=True)
             else:
                 event["release_frames"] += 1
+                print(f"[STATE] 食物記憶過期，釋放中 ({event['release_frames']}/{self.event_config['release_frames']})", flush=True)
                 if chopsticks:
                     event["distances"] = self._build_distance_summary(chopsticks, None, scene)
 
@@ -328,6 +331,7 @@ class ObjectAnalyzer:
         event = self.active_event
         release_point = event.get("last_food_center") or event.get("last_chopsticks_center")
         release_bowl = self._which_bowl(release_point, scene)
+        print(f"[JUDGE] 最終判斷 | 食物={event.get('carried_food')} | 釋放點=({release_point.get('x')},{release_point.get('y')}) | 碗區={release_bowl or '無'} | 曾進碗={event.get('entered_target_bowl',0)}次", flush=True)
 
         if release_bowl is not None:
             self._finish_event("deliver", success=True, scene=scene)

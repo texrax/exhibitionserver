@@ -56,6 +56,10 @@ BOWL_MAX_AREA = float(os.environ.get("BOWL_MAX_AREA", "0.60"))
 BOWL_MAX_ASPECT = float(os.environ.get("BOWL_MAX_ASPECT", "1.8"))
 BOWL_TOP_K = int(os.environ.get("BOWL_TOP_K", "2"))
 
+# === 效能設定 ===
+DETECT_EVERY_N = int(os.environ.get("DETECT_EVERY_N", "3"))  # 每 N 幀偵測一次
+JPEG_QUALITY = int(os.environ.get("JPEG_QUALITY", "70"))
+
 # === OSC 設定 ===
 OSC_IP = os.environ.get("OSC_IP", "127.0.0.1")
 OSC_PORT = int(os.environ.get("OSC_PORT", "7000"))
@@ -298,11 +302,17 @@ class ApiResponse(BaseModel):
 def video_loop() -> None:
     global video_capture, latest_frame_jpg, current_status, monitor_active
     camera_source = os.environ.get("CAMERA_SOURCE", "0")
+    print(f"[Camera] CAMERA_SOURCE={camera_source}", flush=True)
     # 支援數字（本機攝影機 index）或 URL（手機 IP Cam / RTSP 串流）
-    video_capture = cv2.VideoCapture(int(camera_source) if camera_source.isdigit() else camera_source)
+    if camera_source.isdigit():
+        # 用 AVFoundation backend 確保 macOS 上 index 對應正確裝置
+        video_capture = cv2.VideoCapture(int(camera_source), cv2.CAP_AVFOUNDATION)
+    else:
+        video_capture = cv2.VideoCapture(camera_source)
+    print(f"[Camera] opened={video_capture.isOpened()}, backend={video_capture.getBackendName()}", flush=True)
     video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
     video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
-    video_capture.set(cv2.CAP_PROP_FPS, 60)
+    video_capture.set(cv2.CAP_PROP_FPS, 30)
     video_capture.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # 避免讀到舊幀
 
     if not video_capture.isOpened():
@@ -310,51 +320,86 @@ def video_loop() -> None:
         return
 
     monitor_active = True
+    frame_count = 0
+    last_tracked_objects = []
+    last_analysis_res = {}
     while monitor_active:
         success, frame = video_capture.read()
         if not success:
             time.sleep(0.2)
             continue
 
+        frame_count += 1
+        run_detect = (frame_count % DETECT_EVERY_N == 0)
+
         try:
-            detections = detector.detect(
-                frame,
-                conf_threshold=DETECT_CONF,
-                custom_conf_threshold=CHOPSTICKS_CONF,
-                custom_iou_threshold=CHOPSTICKS_IOU,
-                custom_max_det=CHOPSTICKS_MAX_DET,
-                custom_min_area_ratio=CHOPSTICKS_MIN_AREA,
-                custom_max_area_ratio=CHOPSTICKS_MAX_AREA,
-                custom_min_aspect_ratio=CHOPSTICKS_MIN_ASPECT,
-                custom_low_aspect_high_conf=CHOPSTICKS_LOW_ASPECT_HIGH_CONF,
-                custom_top_k=CHOPSTICKS_TOP_K,
-                food_conf_threshold=FOOD_CONF,
-                food_iou_threshold=FOOD_IOU,
-                food_max_det=FOOD_MAX_DET,
-                bowl_conf_threshold=BOWL_CONF,
-                bowl_iou_threshold=BOWL_IOU,
-                bowl_max_det=BOWL_MAX_DET,
-                bowl_min_area_ratio=BOWL_MIN_AREA,
-                bowl_max_area_ratio=BOWL_MAX_AREA,
-                bowl_max_aspect_ratio=BOWL_MAX_ASPECT,
-                bowl_top_k=BOWL_TOP_K,
-            ) if detector else []
-            analysis_res = analyzer.analyze(detections, image_width=frame.shape[1], image_height=frame.shape[0], use_state=True) if analyzer else {}
-            tracked_objects = analysis_res.get("tracked_objects", detections)
+            if run_detect:
+                detections = detector.detect(
+                    frame,
+                    conf_threshold=DETECT_CONF,
+                    custom_conf_threshold=CHOPSTICKS_CONF,
+                    custom_iou_threshold=CHOPSTICKS_IOU,
+                    custom_max_det=CHOPSTICKS_MAX_DET,
+                    custom_min_area_ratio=CHOPSTICKS_MIN_AREA,
+                    custom_max_area_ratio=CHOPSTICKS_MAX_AREA,
+                    custom_min_aspect_ratio=CHOPSTICKS_MIN_ASPECT,
+                    custom_low_aspect_high_conf=CHOPSTICKS_LOW_ASPECT_HIGH_CONF,
+                    custom_top_k=CHOPSTICKS_TOP_K,
+                    food_conf_threshold=FOOD_CONF,
+                    food_iou_threshold=FOOD_IOU,
+                    food_max_det=FOOD_MAX_DET,
+                    bowl_conf_threshold=BOWL_CONF,
+                    bowl_iou_threshold=BOWL_IOU,
+                    bowl_max_det=BOWL_MAX_DET,
+                    bowl_min_area_ratio=BOWL_MIN_AREA,
+                    bowl_max_area_ratio=BOWL_MAX_AREA,
+                    bowl_max_aspect_ratio=BOWL_MAX_ASPECT,
+                    bowl_top_k=BOWL_TOP_K,
+                ) if detector else []
+                analysis_res = analyzer.analyze(detections, image_width=frame.shape[1], image_height=frame.shape[0], use_state=True) if analyzer else {}
+                tracked_objects = analysis_res.get("tracked_objects", detections)
+                last_analysis_res = analysis_res
 
-            with lock:
-                current_status = {
-                    "timestamp": time.time(),
-                    "count": len(tracked_objects),
-                    "analysis": {k: v for k, v in analysis_res.items() if k != "tracked_objects"},
-                    "objects": tracked_objects,
-                }
+                with lock:
+                    current_status = {
+                        "timestamp": time.time(),
+                        "count": len(tracked_objects),
+                        "analysis": {k: v for k, v in analysis_res.items() if k != "tracked_objects"},
+                        "objects": tracked_objects,
+                    }
 
-            send_osc_data(analysis_res)
+                send_osc_data(analysis_res)
+                last_tracked_objects = tracked_objects
 
-            annotated = detector.draw_results(frame, tracked_objects) if detector else frame.copy()
-            annotated = draw_scene_overlay(annotated, analysis_res)
-            ret, buffer = cv2.imencode(".jpg", annotated)
+                # 記錄偵測到的物件
+                if tracked_objects:
+                    from collections import Counter as _Counter
+                    obj_summary = _Counter(d["label"] for d in tracked_objects)
+                    summary_str = ", ".join(f"{label}x{cnt}" for label, cnt in obj_summary.items())
+                    print(f"[DETECT] {summary_str}", flush=True)
+
+                # 記錄餐桌互動事件
+                for ev in analysis_res.get("dining_events", []):
+                    etype = ev.get("event_type", "none")
+                    food = ev.get("carried_food") or "無"
+                    state = ev.get("state", "")
+                    src = ev.get("source_side") or "?"
+                    tgt = ev.get("target_side") or "?"
+                    if etype == "deliver":
+                        print(f"[EVENT] ✅ 成功送餐！{food} 從 {src} 送到 {tgt} 的碗裡", flush=True)
+                    elif etype == "pickup":
+                        print(f"[EVENT] 🥢 夾起 {food}（{src} 側）", flush=True)
+                    elif etype == "drop":
+                        print(f"[EVENT] ❌ {food} 掉落！（{state}）", flush=True)
+
+                annotated = detector.draw_results(frame, tracked_objects) if detector else frame.copy()
+                annotated = draw_scene_overlay(annotated, analysis_res)
+            else:
+                # 非偵測幀：重用上次的偵測結果畫 bounding box + overlay
+                annotated = detector.draw_results(frame, last_tracked_objects) if detector else frame.copy()
+                annotated = draw_scene_overlay(annotated, last_analysis_res) if last_analysis_res else annotated
+
+            ret, buffer = cv2.imencode(".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, JPEG_QUALITY])
             if ret:
                 with lock:
                     latest_frame_jpg = buffer.tobytes()
@@ -452,4 +497,4 @@ async def detect_image(file: UploadFile = File(...), conf: float = DETECT_CONF) 
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000, access_log=False)

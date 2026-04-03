@@ -45,7 +45,9 @@
           "CAMERA_SOURCE": "0",
           "CHOPSTICKS_MODEL_Y11": "models/chopsticks.pt",
           "FOOD_MODEL_Y11": "models/food.pt",
-          "BOWL_MODEL_Y11": "models/bowl.pt"
+          "BOWL_MODEL_Y11": "",
+          "LEFT_BOWL_ZONE": "0.08,0.52,0.42,0.95",
+          "RIGHT_BOWL_ZONE": "0.58,0.52,0.92,0.95"
         },
         "url": "http://localhost:8000",
         "pollIntervalMs": 500,
