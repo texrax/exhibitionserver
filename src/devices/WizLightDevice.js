@@ -1,5 +1,6 @@
 // WizLightDevice.js — Philips Wiz 智慧燈泡控制（UDP 協議）
 const dgram = require("dgram");
+const os = require("os");
 const BaseDevice = require("./BaseDevice");
 
 class WizLightDevice extends BaseDevice {
@@ -175,6 +176,25 @@ class WizLightDevice extends BaseDevice {
   }
 
   /**
+   * 取得所有區域網路介面的子網廣播位址
+   */
+  static _getBroadcastAddresses() {
+    const addrs = [];
+    const ifaces = os.networkInterfaces();
+    for (const name of Object.keys(ifaces)) {
+      for (const iface of ifaces[name]) {
+        if (iface.family === "IPv4" && !iface.internal) {
+          const ip = iface.address.split(".").map(Number);
+          const mask = iface.netmask.split(".").map(Number);
+          const broadcast = ip.map((octet, i) => (octet | (~mask[i] & 255))).join(".");
+          addrs.push(broadcast);
+        }
+      }
+    }
+    return addrs;
+  }
+
+  /**
    * UDP 廣播掃描區域網路上所有 Wiz 燈泡
    * @returns {Promise<Array<{ip: string, mac: string, state: object}>>}
    */
@@ -184,12 +204,18 @@ class WizLightDevice extends BaseDevice {
       const msg = JSON.stringify({ id: 1, method: "getPilot", params: {} });
       const found = [];
 
+      // 取得所有區域網路子網廣播位址，避免 255.255.255.255 在 Windows 多網卡環境走錯介面
+      const broadcastAddrs = WizLightDevice._getBroadcastAddresses();
+      if (broadcastAddrs.length === 0) broadcastAddrs.push("255.255.255.255");
+
       sock.bind(() => {
         sock.setBroadcast(true);
         // 發送多次廣播，間隔 300ms，避免 UDP 丟包導致漏掃
         for (let i = 0; i < broadcastCount; i++) {
           setTimeout(() => {
-            try { sock.send(msg, 38899, "255.255.255.255"); } catch {}
+            for (const addr of broadcastAddrs) {
+              try { sock.send(msg, 38899, addr); } catch {}
+            }
           }, i * 300);
         }
       });
