@@ -1,8 +1,9 @@
 {
   "start": {
-    "description": "展間開始 — 情境一變色燈亮白燈",
+    "description": "展間開始 — 情境一聚光燈與右壁燈一起亮白燈",
     "actions": [
-      { "device": "spotlight_1", "action": "setTemp", "params": { "temp": 4000, "brightness": 100 } }
+      { "device": "spotlight_1", "action": "setTemp", "params": { "temp": 4000, "brightness": 100 } },
+      { "device": "bulb_2", "action": "setTemp", "params": { "temp": 4000, "brightness": 100 } }
     ]
   },
 

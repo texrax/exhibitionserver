@@ -199,11 +199,11 @@
   };
 
   window.vtsExpression = function (file) {
-    executeDevice("vtubestudio", "setExpression", { file, active: true, fadeTime: 0.3 });
+    executeDevice("vtubestudio", "setExpression", { file, active: true, fadeTime: 0.3, zoomOnExpression: false });
   };
 
-  window.vtsHotkey = function (name) {
-    executeDevice("vtubestudio", "triggerHotkey", { name });
+  window.vtsHotkey = function (name, hotkeyID) {
+    executeDevice("vtubestudio", "triggerHotkey", { name, hotkeyID });
   };
 
   window.vtsRemoveAllExpressions = function () {
@@ -282,7 +282,9 @@
     // 分組按鈕
     const hasSpotlights = wizDevices.some((d) => d.group === "spotlights");
     const hasBulbs = wizDevices.some((d) => d.group === "bulbs");
+    const hasSceneOne = ids.includes("spotlight_1") && ids.includes("bulb_2");
     if (hasSpotlights) html += '<button class="wiz-btn wiz-target" data-target="spotlights" onclick="wizSetTarget(\'spotlights\')">聚光燈</button>';
+    if (hasSceneOne) html += '<button class="wiz-btn wiz-target" data-target="scene1" onclick="wizSetTarget(\'scene1\')">情境一燈群</button>';
     if (hasBulbs) html += '<button class="wiz-btn wiz-target" data-target="bulbs" onclick="wizSetTarget(\'bulbs\')">壁燈/掛燈</button>';
 
     // 個別燈泡按鈕（用 label 顯示中文名稱）
@@ -309,6 +311,14 @@
       executeDevice("wizlight_all", action, params);
     } else if (wizTarget === "spotlights") {
       executeDevice("wizlight_spotlights", action, params);
+    } else if (wizTarget === "scene1") {
+      const targets = [];
+      if (wizIds.includes("spotlight_1")) targets.push("spotlight_1");
+      if (wizIds.includes("bulb_2")) targets.push("bulb_2");
+      if (targets.length === 0) {
+        return showToast("情境一燈群目標沒有可用燈具");
+      }
+      targets.forEach((id) => executeDevice(id, action, params));
     } else if (wizTarget === "bulbs") {
       executeDevice("wizlight_bulbs", action, params);
     } else {
