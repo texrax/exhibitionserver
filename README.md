@@ -299,7 +299,6 @@ cd yolo && python3 -m venv venv && ./venv/bin/pip install -r requirements.txt
 | `JPEG_QUALITY` | `70` | video_feed JPEG 壓縮品質 (1-100) |
 
 ### arduino ide設定
-
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <FastLED.h>
@@ -313,7 +312,7 @@ const char* ssid = "table";
 const char* password = "00000000"; 
 
 // 💡 筆電 IP：請務必確認 ipconfig 查到的是 31.21
-const String serverURL = "http://192.168.31.21:3000"; 
+const String serverURL = "http://192.168.31.47:3000"; 
 
 // ==========================================
 // 2. 🌈 燈條與感測器設定
@@ -342,16 +341,22 @@ void updateLEDs() {
       }
     }
   } 
-  else if (currentMode == "blink") {
-    EVERY_N_MILLISECONDS(15) {
-      fadeToBlackBy(leds, NUM_LEDS, 70);
-      if (random8() > 235) {
+else if (currentMode == "blink") {
+    // 💡 1. 調慢速度，從 15 改成 40
+    EVERY_N_MILLISECONDS(80) { 
+      
+      // 💡 2. 讓淡出變慢（從 70 改成 30），燈光會像呼吸一樣慢慢消失
+      fadeToBlackBy(leds, NUM_LEDS, 30); 
+      
+      // 💡 3. 降低出現機率（從 235 改成 248），讓閃爍更稀疏
+      if (random8() >100) { 
         int p = random16(NUM_LEDS);
-        leds[p] = CRGB(200, 0, 180); 
-        if (p > 0) leds[p-1] = CRGB(150, 150, 160); 
+        // 💡 4. 稍微降低一點亮度，視覺更舒服
+        leds[p] = CRGB(160, 0, 140); // 深紫色
+        if (p > 0) leds[p-1] = CRGB(80, 80, 90); // 黯淡的灰白點
       }
     }
-  } 
+  }
   else {
     EVERY_N_MILLISECONDS(50) {
       uint8_t br = beatsin8(4, 30, 80);

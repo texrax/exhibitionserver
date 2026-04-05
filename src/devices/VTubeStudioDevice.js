@@ -25,6 +25,7 @@ class VTubeStudioDevice extends BaseDevice {
     this._requestTimeout = config.requestTimeout || 10000;
     this._activeExpressions = new Set(); // 追蹤目前啟用的表情檔案名稱
     this._expressionZoomed = false; // 追蹤表情拉近鏡頭狀態
+    this.zoomOnExpression = config.zoomOnExpression !== false;
   }
 
   async init() {
@@ -43,7 +44,7 @@ class VTubeStudioDevice extends BaseDevice {
       case "moveModel":
         return this._moveModel(params);
       case "setExpression":
-        return this._setExpression(params.file, params.active !== false, params.fadeTime);
+        return this._setExpression(params);
       case "tintArtMesh":
         return this._tintArtMesh(params);
       case "loadModel":
@@ -75,7 +76,7 @@ class VTubeStudioDevice extends BaseDevice {
     return [
       { action: "triggerHotkey", params: { name: "string" }, description: "觸發快捷鍵（名稱或 ID）" },
       { action: "moveModel", params: { timeInSeconds: "number", positionX: "number", positionY: "number", rotation: "number", size: "number" }, description: "移動模型" },
-      { action: "setExpression", params: { file: "string", active: "boolean", fadeTime: "number" }, description: "啟用/停用表情" },
+      { action: "setExpression", params: { file: "string", active: "boolean", fadeTime: "number", zoomOnExpression: "boolean" }, description: "啟用/停用表情" },
       { action: "tintArtMesh", params: { colorTint: "object", artMeshMatcher: "object" }, description: "ArtMesh 染色" },
       { action: "removeAllExpressions", params: { fadeTime: "number" }, description: "移除所有活躍表情" },
       { action: "loadModel", params: { modelID: "string" }, description: "載入模型" },
@@ -237,7 +238,12 @@ class VTubeStudioDevice extends BaseDevice {
     return result.data;
   }
 
-  async _setExpression(expressionFile, active = true, fadeTime = 0.25) {
+  async _setExpression(params = {}) {
+    const expressionFile = params.file;
+    const active = params.active !== false;
+    const fadeTime = params.fadeTime ?? 0.25;
+    const zoomOnExpression = params.zoomOnExpression !== undefined ? params.zoomOnExpression : this.zoomOnExpression;
+
     // 啟用新表情前，先關閉所有已啟用的表情（自動互斥）
     if (active && this._activeExpressions.size > 0) {
       const deactivations = [...this._activeExpressions].map((file) =>
@@ -253,8 +259,8 @@ class VTubeStudioDevice extends BaseDevice {
       this._activeExpressions.clear();
     }
 
-    // 啟用表情時拉近鏡頭（僅第一次）
-    if (active && !this._expressionZoomed) {
+    // 啟用表情時拉近鏡頭（僅第一次，且可透過設定關閉）
+    if (active && zoomOnExpression && !this._expressionZoomed) {
       try {
         await this._moveModel({ timeInSeconds: 0.4, size: 25, positionY: 0.1, relative: true });
         this._expressionZoomed = true;

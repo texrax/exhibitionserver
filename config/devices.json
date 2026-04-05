@@ -8,7 +8,8 @@
         "port": 8001,
         "pluginName": "ExhibitionServer",
         "pluginDeveloper": "Exhibition",
-        "tokenPath": "./config/vts_token.txt"
+        "tokenPath": "./config/vts_token.txt",
+        "zoomOnExpression": false
       }
     },
     {
