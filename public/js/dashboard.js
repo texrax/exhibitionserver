@@ -283,8 +283,10 @@
     const hasSpotlights = wizDevices.some((d) => d.group === "spotlights");
     const hasBulbs = wizDevices.some((d) => d.group === "bulbs");
     const hasSceneOne = ids.includes("spotlight_1") && ids.includes("bulb_2");
+    const hasSceneTwo = ids.includes("spotlight_2") && ids.includes("bulb_3");
     if (hasSpotlights) html += '<button class="wiz-btn wiz-target" data-target="spotlights" onclick="wizSetTarget(\'spotlights\')">聚光燈</button>';
     if (hasSceneOne) html += '<button class="wiz-btn wiz-target" data-target="scene1" onclick="wizSetTarget(\'scene1\')">情境一燈群</button>';
+    if (hasSceneTwo) html += '<button class="wiz-btn wiz-target" data-target="scene2" onclick="wizSetTarget(\'scene2\')">情境二燈群</button>';
     if (hasBulbs) html += '<button class="wiz-btn wiz-target" data-target="bulbs" onclick="wizSetTarget(\'bulbs\')">壁燈/掛燈</button>';
 
     // 個別燈泡按鈕（用 label 顯示中文名稱）
@@ -317,6 +319,14 @@
       if (wizIds.includes("bulb_2")) targets.push("bulb_2");
       if (targets.length === 0) {
         return showToast("情境一燈群目標沒有可用燈具");
+      }
+      targets.forEach((id) => executeDevice(id, action, params));
+    } else if (wizTarget === "scene2") {
+      const targets = [];
+      if (wizIds.includes("spotlight_2")) targets.push("spotlight_2");
+      if (wizIds.includes("bulb_3")) targets.push("bulb_3");
+      if (targets.length === 0) {
+        return showToast("情境二燈群目標沒有可用燈具");
       }
       targets.forEach((id) => executeDevice(id, action, params));
     } else if (wizTarget === "bulbs") {

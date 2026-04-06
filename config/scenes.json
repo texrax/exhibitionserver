@@ -1,9 +1,22 @@
 {
   "start": {
-    "description": "展間開始 — 情境一聚光燈與右壁燈一起亮白燈",
+    "description": "展間開始 — 情境一變色燈亮白燈",
     "actions": [
-      { "device": "spotlight_1", "action": "setTemp", "params": { "temp": 4000, "brightness": 100 } },
-      { "device": "bulb_2", "action": "setTemp", "params": { "temp": 4000, "brightness": 100 } }
+      { "device": "spotlight_1", "action": "setTemp", "params": { "temp": 4000, "brightness": 100 } }
+    ]
+  },
+
+  "right_lights_white": {
+    "description": "右聚光燈和右壁燈亮白燈",
+    "actions": [
+      { "device": "wizlight_right", "action": "setTemp", "params": { "temp": 4000, "brightness": 100 } }
+    ]
+  },
+
+  "scene_2": {
+    "description": "情境二 — 右聚光燈和右壁燈亮琥珀色",
+    "actions": [
+      { "device": "wizlight_right", "action": "setColor", "params": { "r": 255, "g": 160, "b": 20, "brightness": 100 } }
     ]
   },
 
@@ -40,7 +53,7 @@
   "play_day_3": {
     "description": "星期三 — 琥珀色波浪 + 開心 (暖心週三)",
     "actions": [
-      { "device": "bulb_1", "action": "setColor", "params": { "r": 255, "g": 160, "b": 20, "brightness": 100, "speed": 80 } },
+      { "device": "bulb_1", "action": "setColor", "params": { "r": 255, "g": 160, "b": 20, "brightness": 100 } },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "block_wave" } },
       { "device": "audio", "action": "play", "params": { "file": "可以.wav" } },
       { "device": "vtubestudio", "action": "setExpression", "params": { "file": "開心(睜眼).exp3.json", "active": true, "fadeTime": 0.3 } },

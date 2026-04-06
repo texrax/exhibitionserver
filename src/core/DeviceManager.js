@@ -184,6 +184,7 @@ class DeviceManager {
       wizlight_all: null,
       wizlight_spotlights: "spotlights",
       wizlight_bulbs: "bulbs",
+      wizlight_right: "right",
     };
 
     if (deviceId in wizGroupMap) {

@@ -1,9 +1,9 @@
 {
   "lights": [
     { "mac": "a8bb506ce642", "id": "spotlight_1", "label": "左聚光燈", "group": "spotlights", "canChangeColor": true },
-    { "mac": "444f8eabe142", "id": "spotlight_2", "label": "右聚光燈", "group": "spotlights", "canChangeColor": false },
+    { "mac": "444f8eabe142", "id": "spotlight_2", "label": "右聚光燈", "group": "right", "canChangeColor": false },
     { "mac": "cc40851734be", "id": "bulb_1", "label": "左壁燈", "group": "bulbs", "canChangeColor": true },
     { "mac": "cc4085175f1a", "id": "bulb_2", "label": "掛燈", "group": "bulbs", "canChangeColor": true },
-    { "mac": "cc4085174cf0", "id": "bulb_3", "label": "右壁燈", "group": "bulbs", "canChangeColor": true }
+    { "mac": "cc4085174cf0", "id": "bulb_3", "label": "右壁燈", "group": "right", "canChangeColor": true }
   ]
 }
