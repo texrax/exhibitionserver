@@ -497,6 +497,7 @@ async def detect_image(file: UploadFile = File(...), conf: float = DETECT_CONF) 
         food_conf_threshold=FOOD_CONF,
         food_iou_threshold=FOOD_IOU,
         food_max_det=FOOD_MAX_DET,
+        food_top_k=FOOD_TOP_K,
         bowl_conf_threshold=BOWL_CONF,
         bowl_iou_threshold=BOWL_IOU,
         bowl_max_det=BOWL_MAX_DET,

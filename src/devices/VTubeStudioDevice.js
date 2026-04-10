@@ -217,9 +217,23 @@ class VTubeStudioDevice extends BaseDevice {
   //  VTS API 操作方法
   // ==================================================
 
-  async _triggerHotkey(hotkeyID) {
+  async _triggerHotkey(hotkeyIDOrName) {
+    let hotkeyID = hotkeyIDOrName;
+
+    // 如果傳入的不是 UUID 格式，視為名稱，先查出對應的 hotkeyID
+    if (hotkeyIDOrName && !/^[0-9a-f]{32}$/i.test(hotkeyIDOrName.replace(/-/g, ""))) {
+      const hotkeys = await this._getHotkeys();
+      const match = (hotkeys.availableHotkeys || []).find(
+        (h) => h.name === hotkeyIDOrName
+      );
+      if (!match) {
+        throw new Error(`找不到名稱為 "${hotkeyIDOrName}" 的快捷鍵`);
+      }
+      hotkeyID = match.hotkeyID;
+    }
+
     const result = await this._sendRequest("HotkeyTriggerRequest", { hotkeyID });
-    this.eventBus.publish(`${this.id}:hotkeyTriggered`, { hotkeyID });
+    this.eventBus.publish(`${this.id}:hotkeyTriggered`, { hotkeyID, name: hotkeyIDOrName });
     return result.data;
   }
 

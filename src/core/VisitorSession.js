@@ -39,6 +39,13 @@ class VisitorSession {
     this._onSceneFinished = this._onSceneFinished.bind(this);
     this.eventBus.on("scene:finished", this._onSceneFinished);
 
+    // 監聽 start / all_off 場景，自動重置 session
+    this.eventBus.on("scene:started", (data) => {
+      if (data.scene === "start" || data.scene === "all_off") {
+        this.reset();
+      }
+    });
+
     console.log("[VisitorSession] 初始化完成，等待訪客互動...");
   }
 
@@ -69,6 +76,13 @@ class VisitorSession {
       console.log(
         `[VisitorSession] 選日子: ${DAY_NAMES[dayNum]} (第 ${this.dayAttempts} 次嘗試)`
       );
+
+      // 選日子完成，發出事件讓燈光場景自動觸發
+      this.eventBus.publish("visitor:day_completed", {
+        day: dayNum,
+        dayName: DAY_NAMES[dayNum],
+        attempts: this.dayAttempts,
+      });
 
       this._checkCompletion();
       return;

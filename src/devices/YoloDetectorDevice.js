@@ -36,12 +36,18 @@ class YoloDetectorDevice extends BaseDevice {
       this._setStatus("error", "config.projectPath 未設定");
       return;
     }
-    await this._spawnServer();
+    // 不自動啟動 Python server，等手動 start 才啟動
+    this._setStatus("offline", "待機中（手動模式）");
+    console.log(`[${this.id}] 待機中，不自動啟動 YOLO server`);
   }
 
   async execute(action, params = {}) {
     switch (action) {
       case "start":
+        // 如果 Python server 還沒啟動，先啟動它
+        if (!this._process) {
+          await this._spawnServer();
+        }
         this._startPolling();
         return { polling: true };
       case "stop":
@@ -143,16 +149,14 @@ class YoloDetectorDevice extends BaseDevice {
       }
     });
 
-    // 等待伺服器就緒
+    // 等待伺服器就緒（不自動啟動輪詢，手動模式由控制台觸發）
     const ready = await this._waitForReady();
     if (ready) {
       this._setStatus("online");
-      console.log(`[${this.id}] YoloTD 伺服器就緒: ${this.url}`);
-      this._startPolling();
+      console.log(`[${this.id}] YoloTD 伺服器就緒: ${this.url}（輪詢未啟動，等待手動觸發）`);
     } else {
       this._setStatus("offline", "伺服器啟動逾時");
-      console.warn(`[${this.id}] YoloTD 啟動逾時 (${this.startupTimeoutMs}ms)，輪詢仍會持續嘗試`);
-      this._startPolling();
+      console.warn(`[${this.id}] YoloTD 啟動逾時 (${this.startupTimeoutMs}ms)`);
     }
   }
 

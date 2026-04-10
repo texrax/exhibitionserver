@@ -206,6 +206,34 @@ class ObjectDetector:
 
         detections.extend(custom_detections)
 
+    @staticmethod
+    def _compute_iou(a: Dict[str, int], b: Dict[str, int]) -> float:
+        """計算兩個 bbox 的 IoU"""
+        ix1 = max(a["x1"], b["x1"])
+        iy1 = max(a["y1"], b["y1"])
+        ix2 = min(a["x2"], b["x2"])
+        iy2 = min(a["y2"], b["y2"])
+        inter = max(0, ix2 - ix1) * max(0, iy2 - iy1)
+        area_a = max(1, (a["x2"] - a["x1"]) * (a["y2"] - a["y1"]))
+        area_b = max(1, (b["x2"] - b["x1"]) * (b["y2"] - b["y1"]))
+        return inter / (area_a + area_b - inter)
+
+    def _cross_class_nms(self, detections: List[Dict[str, Any]], iou_threshold: float = 0.5) -> List[Dict[str, Any]]:
+        """跨類別 NMS：同一區域重疊的食物框只保留信心度最高的"""
+        if len(detections) <= 1:
+            return detections
+        sorted_dets = sorted(detections, key=lambda d: d["confidence"], reverse=True)
+        keep = []
+        for det in sorted_dets:
+            suppressed = False
+            for kept in keep:
+                if self._compute_iou(det["bbox"], kept["bbox"]) > iou_threshold:
+                    suppressed = True
+                    break
+            if not suppressed:
+                keep.append(det)
+        return keep
+
     def _append_food_detections(
         self,
         model: YOLO,
@@ -220,6 +248,7 @@ class ObjectDetector:
             food_kwargs["iou"] = food_iou_threshold
         results = model(image, **food_kwargs)
 
+        food_detections = []
         for result in results:
             if result.boxes:
                 for box in result.boxes:
@@ -227,7 +256,7 @@ class ObjectDetector:
                     conf = float(box.conf[0])
                     cls_id = int(box.cls[0])
                     label_name = str(model.names[cls_id])
-                    detections.append(
+                    food_detections.append(
                         self._build_detection(
                             detection_id=-1,
                             label_name=label_name,
@@ -239,6 +268,19 @@ class ObjectDetector:
                             y2=y2,
                         )
                     )
+
+        # 每個類別只保留信心度最高的一個
+        best_per_class: Dict[str, Dict[str, Any]] = {}
+        for det in food_detections:
+            label = det["label"]
+            if label not in best_per_class or det["confidence"] > best_per_class[label]["confidence"]:
+                best_per_class[label] = det
+        food_detections = list(best_per_class.values())
+
+        # 跨類別 NMS：同一區域重疊的不同食物框只保留信心度最高的
+        food_detections = self._cross_class_nms(food_detections, iou_threshold=0.5)
+
+        detections.extend(food_detections)
 
     def _append_bowl_detections(
         self,

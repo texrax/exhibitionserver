@@ -95,6 +95,15 @@ class OBSDevice extends BaseDevice {
           filterEnabled: params.enabled,
         });
 
+      case "startRecord":
+        return this._sendRequest("StartRecord");
+      case "stopRecord":
+        return this._sendRequest("StopRecord");
+      case "startStream":
+        return this._sendRequest("StartStream");
+      case "stopStream":
+        return this._sendRequest("StopStream");
+
       default:
         throw new Error(`[${this.id}] 不支援的動作: ${action}`);
     }
@@ -109,6 +118,10 @@ class OBSDevice extends BaseDevice {
       { action: "getSceneList", params: {}, description: "取得場景清單" },
       { action: "getSourceScreenshot", params: { sourceName: "string", format: "string" }, description: "截取來源畫面" },
       { action: "setSourceFilterVisibility", params: { sourceName: "string", filterName: "string", enabled: "boolean" }, description: "啟用/停用濾鏡" },
+      { action: "startRecord", params: {}, description: "開始錄製" },
+      { action: "stopRecord", params: {}, description: "停止錄製" },
+      { action: "startStream", params: {}, description: "開始串流" },
+      { action: "stopStream", params: {}, description: "停止串流" },
     ];
   }
 

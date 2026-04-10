@@ -15,6 +15,10 @@ class SceneManager {
     this.scenes = new Map();
     // 場景鎖定（防止同時觸發多個場景造成衝突）
     this._activeScene = null;
+    // 取消正在執行的場景用
+    this._abortController = null;
+    // 可以強制取消其他場景的場景名單
+    this._forceScenes = new Set(["start", "all_off"]);
   }
 
   /**
@@ -49,8 +53,14 @@ class SceneManager {
     }
 
     if (this._activeScene && scene.exclusive !== false) {
-      console.log(`[SceneManager] 場景 "${this._activeScene}" 執行中，忽略 "${sceneName}"`);
-      return { status: "busy", activeScene: this._activeScene };
+      // start / all_off 可以強制取消正在執行的場景
+      if (this._forceScenes.has(sceneName)) {
+        console.log(`[SceneManager] 強制取消場景 "${this._activeScene}"，執行 "${sceneName}"`);
+        this._cancelActiveScene();
+      } else {
+        console.log(`[SceneManager] 場景 "${this._activeScene}" 執行中，忽略 "${sceneName}"`);
+        return { status: "busy", activeScene: this._activeScene };
+      }
     }
 
     return this._executeScene(sceneName, scene);
@@ -131,8 +141,20 @@ class SceneManager {
     return true;
   }
 
+  /**
+   * 強制取消正在執行的場景
+   */
+  _cancelActiveScene() {
+    if (this._abortController) {
+      this._abortController.aborted = true;
+    }
+    this._activeScene = null;
+  }
+
   async _executeScene(sceneName, scene) {
     this._activeScene = sceneName;
+    const abort = { aborted: false };
+    this._abortController = abort;
     this.eventBus.publish("scene:started", { scene: sceneName });
     console.log(`[SceneManager] ▶ 執行場景: ${sceneName}`);
 
@@ -140,10 +162,16 @@ class SceneManager {
 
     try {
       for (const step of scene.actions || []) {
+        // 檢查是否被取消
+        if (abort.aborted) {
+          console.log(`[SceneManager] 場景 "${sceneName}" 已被取消`);
+          break;
+        }
+
         try {
           // 支援 delay 步驟
           if (step.delay) {
-            await this._delay(step.delay);
+            await this._delay(step.delay, abort);
             continue;
           }
 
@@ -152,7 +180,8 @@ class SceneManager {
             await this._waitForEvent(
               step.waitForEvent,
               step.timeout || 60000,
-              step.condition
+              step.condition,
+              abort
             );
             continue;
           }
@@ -170,6 +199,9 @@ class SceneManager {
         }
       }
     } finally {
+      if (this._abortController === abort) {
+        this._abortController = null;
+      }
       this._activeScene = null;
       this.eventBus.publish("scene:finished", { scene: sceneName, results });
       console.log(`[SceneManager] ■ 場景完成: ${sceneName}`);
@@ -178,31 +210,50 @@ class SceneManager {
     return { status: "ok", scene: sceneName, results };
   }
 
-  _delay(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+  _delay(ms, abort = null) {
+    return new Promise((resolve) => {
+      let done = false;
+      const finish = () => { if (!done) { done = true; clearTimeout(timer); clearInterval(check); resolve(); } };
+      const timer = setTimeout(finish, ms);
+      const check = abort ? setInterval(() => { if (abort.aborted) finish(); }, 100) : null;
+    });
   }
 
   /**
    * 等待 EventBus 上的指定事件，可選條件過濾
-   * 超時後自動 resolve（不中斷場景流程）
+   * 超時或被取消後自動 resolve（不中斷場景流程）
    */
-  _waitForEvent(eventName, timeout = 60000, condition = null) {
+  _waitForEvent(eventName, timeout = 60000, condition = null, abort = null) {
     return new Promise((resolve) => {
       console.log(`[SceneManager] 等待事件: ${eventName} (逾時 ${timeout}ms)`);
 
-      const timer = setTimeout(() => {
+      const cleanup = () => {
+        clearTimeout(timer);
+        clearInterval(abortCheck);
         this.eventBus.removeListener(eventName, handler);
+      };
+
+      const timer = setTimeout(() => {
+        cleanup();
         console.warn(`[SceneManager] waitForEvent "${eventName}" 逾時`);
         resolve();
       }, timeout);
 
       const handler = (data) => {
         if (condition && !this._checkCondition(condition, data)) return;
-        clearTimeout(timer);
-        this.eventBus.removeListener(eventName, handler);
+        cleanup();
         console.log(`[SceneManager] 收到事件: ${eventName}`);
         resolve();
       };
+
+      // 定期檢查是否被取消
+      const abortCheck = abort ? setInterval(() => {
+        if (abort.aborted) {
+          cleanup();
+          console.log(`[SceneManager] waitForEvent "${eventName}" 已取消`);
+          resolve();
+        }
+      }, 100) : null;
 
       this.eventBus.on(eventName, handler);
     });

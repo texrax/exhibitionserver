@@ -37,6 +37,15 @@
       }
     },
     {
+      "id": "obs",
+      "type": "OBSDevice",
+      "config": {
+        "host": "localhost",
+        "port": 4455,
+        "password": "00000000"
+      }
+    },
+    {
       "id": "yolo_detector",
       "type": "YoloDetectorDevice",
       "config": {
@@ -47,6 +56,7 @@
           "CHOPSTICKS_MODEL_Y11": "models/chopsticks.pt",
           "FOOD_MODEL_Y11": "models/food.pt",
           "BOWL_MODEL_Y11": "",
+          "FOOD_CONF": "0.40",
           "LEFT_BOWL_ZONE": "0.08,0.52,0.42,0.95",
           "RIGHT_BOWL_ZONE": "0.58,0.52,0.92,0.95"
         },
@@ -54,15 +64,6 @@
         "pollIntervalMs": 500,
         "cooldownMs": 3000,
         "startupTimeoutMs": 15000
-      }
-    },
-    {
-      "id": "obs",
-      "type": "OBSDevice",
-      "config": {
-        "host": "localhost",
-        "port": 4455,
-        "password": ""
       }
     }
   ]

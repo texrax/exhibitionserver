@@ -1,0 +1,9 @@
+path: D:/gitit/exhibitionserver/yolo/train/dataset
+train: images/train
+val: images/val
+
+nc: 3
+names:
+  0: pork
+  1: vegetables
+  2: beef

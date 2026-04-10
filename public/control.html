@@ -437,6 +437,7 @@
     <button class="tab" data-tab="vts">VTube Studio</button>
     <button class="tab" data-tab="wiz">Wiz 燈光</button>
     <button class="tab" data-tab="obs">OBS</button>
+    <button class="tab" data-tab="camera">攝影機</button>
     <button class="tab" data-tab="log">日誌</button>
   </div>
 
@@ -564,13 +565,62 @@
       <button class="ctrl-btn" onclick="triggerScene('obs_video_then_vtuber')">播影片 → 自動切 VTuber</button>
     </div>
 
-    <div class="section-title">錄製 / 串流</div>
-    <div class="btn-group">
-      <button class="ctrl-btn on" onclick="obsAction('startRecord')">開始錄製</button>
-      <button class="ctrl-btn off" onclick="obsAction('stopRecord')">停止錄製</button>
-      <button class="ctrl-btn on" onclick="obsAction('startStream')">開始串流</button>
-      <button class="ctrl-btn off" onclick="obsAction('stopStream')">停止串流</button>
+    <div class="section-title">媒體播放</div>
+    <div class="input-grid" style="margin-bottom:8px">
+      <div class="input-group">
+        <label>媒體來源名稱</label>
+        <input type="text" id="obsMediaInput" value="Video" placeholder="OBS 媒體來源名稱">
+      </div>
     </div>
+    <div class="btn-group">
+      <button class="ctrl-btn on" onclick="obsMedia('play')">播放</button>
+      <button class="ctrl-btn" onclick="obsMedia('restart')">重新播放</button>
+      <button class="ctrl-btn" onclick="obsMedia('pause')">暫停</button>
+      <button class="ctrl-btn off" onclick="obsMedia('stop')">停止</button>
+    </div>
+  </div>
+
+  <!-- ==================== 攝影機 ==================== -->
+  <div class="tab-content" id="tab-camera">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div class="section-title" style="margin:0">即時攝影機畫面</div>
+      <div style="display:flex;gap:8px">
+        <button class="ctrl-btn" id="camToggleBtn" onclick="toggleCamera()">開啟</button>
+        <button class="ctrl-btn" onclick="snapshotCamera()">截圖</button>
+      </div>
+    </div>
+    <div id="camContainer" style="position:relative;background:var(--surface2);border-radius:10px;overflow:hidden;border:1px solid var(--border);min-height:200px;display:flex;align-items:center;justify-content:center;">
+      <div id="camPlaceholder" style="color:var(--text-dim);font-size:14px;padding:40px;text-align:center;">
+        點擊「開啟」查看攝影機畫面<br>
+        <span style="font-size:12px;color:var(--text-dim);opacity:0.6;">需要 YOLO 偵測服務運行中</span>
+      </div>
+      <img id="camFeed" style="display:none;width:100%;height:auto;border-radius:10px;" alt="Camera Feed">
+    </div>
+    <div id="camStatus" style="font-size:11px;color:var(--text-dim);margin-top:8px;"></div>
+
+    <div class="section-title" style="margin-top:20px">手動餵食控制</div>
+    <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div id="yoloModeLabel" style="font-size:12px;color:var(--orange);font-weight:600;">手動模式</div>
+      <div id="feedCounter" style="font-size:13px;color:var(--text);font-weight:600;">
+        餵食 <span id="feedCount" style="color:var(--green);font-size:18px;">0</span> 次
+        <span style="color:var(--text-dim);font-size:11px;margin-left:4px;">
+          ( <span id="feedVeg" style="color:var(--green);">0</span> 菜
+          / <span id="feedBeef" style="color:var(--orange);">0</span> 丸
+          / <span id="feedReject" style="color:var(--red);">0</span> 拒 )
+        </span>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+      <button class="ctrl-btn" onclick="manualFeed('vegetable')" style="padding:20px 12px;font-size:15px;font-weight:600;background:var(--green);color:#0f1117;border-color:var(--green);">吃青菜</button>
+      <button class="ctrl-btn" onclick="manualFeed('beef')" style="padding:20px 12px;font-size:15px;font-weight:600;background:var(--orange);color:#0f1117;border-color:var(--orange);">吃丸子</button>
+      <button class="ctrl-btn" onclick="manualFeed('reject')" style="padding:20px 12px;font-size:15px;font-weight:600;background:var(--red);color:#fff;border-color:var(--red);">不吃</button>
+    </div>
+
+    <div style="margin-top:16px;">
+      <button class="ctrl-btn" onclick="endInteraction()" style="width:100%;padding:16px;font-size:16px;font-weight:700;background:var(--accent);color:#fff;border-color:var(--accent);">結束互動</button>
+    </div>
+
+    <div id="camSnapshots" style="margin-top:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;"></div>
   </div>
 
   <!-- ==================== 日誌 ==================== -->
@@ -953,15 +1003,162 @@
       executeDevice('obs', 'switchScene', { sceneName });
     };
 
-    window.obsAction = function (action) {
-      executeDevice('obs', action, {});
+    window.obsMedia = function (action) {
+      const inputName = document.getElementById('obsMediaInput').value.trim();
+      if (!inputName) return showToast('請輸入媒體來源名稱', 'error');
+      const actionMap = {
+        play: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PLAY',
+        pause: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE',
+        stop: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_STOP',
+        restart: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_RESTART',
+      };
+      executeDevice('obs', 'triggerMediaInput', {
+        inputName,
+        mediaAction: actionMap[action],
+      });
     };
+
+    // ==================================================
+    //  Camera
+    // ==================================================
+    let camActive = false;
+    const camFeed = document.getElementById('camFeed');
+    const camPlaceholder = document.getElementById('camPlaceholder');
+    const camToggleBtn = document.getElementById('camToggleBtn');
+    const camStatus = document.getElementById('camStatus');
+    const camSnapshots = document.getElementById('camSnapshots');
+
+    window.toggleCamera = function () {
+      if (camActive) {
+        camFeed.src = '';
+        camFeed.style.display = 'none';
+        camPlaceholder.style.display = '';
+        camToggleBtn.textContent = '開啟';
+        camStatus.textContent = '攝影機已關閉';
+        camActive = false;
+      } else {
+        // 先啟動 YOLO server（如果還沒跑）
+        executeDevice('yolo_detector', 'start', {});
+        camPlaceholder.style.display = 'none';
+        camFeed.style.display = 'block';
+        // 給 server 一點啟動時間
+        camStatus.textContent = '啟動攝影機中...';
+        setTimeout(function () {
+          camFeed.src = '/api/camera/feed?' + Date.now();
+        }, 3000);
+        camToggleBtn.textContent = '關閉';
+        camActive = true;
+
+        camFeed.onload = () => { camStatus.textContent = '串流中'; };
+        camFeed.onerror = () => {
+          camStatus.textContent = 'YOLO 攝影機無法連線（確認偵測服務已啟動）';
+          camFeed.style.display = 'none';
+          camPlaceholder.style.display = '';
+          camPlaceholder.innerHTML = '無法連線攝影機<br><span style="font-size:12px;color:var(--text-dim);opacity:0.6;">確認 YOLO 偵測服務已啟動</span>';
+          camToggleBtn.textContent = '開啟';
+          camActive = false;
+        };
+      }
+    };
+
+    window.snapshotCamera = function () {
+      if (!camActive) {
+        showToast('請先開啟攝影機', 'error');
+        return;
+      }
+      // 用 canvas 從 img 擷取當前畫面
+      const canvas = document.createElement('canvas');
+      canvas.width = camFeed.naturalWidth || camFeed.width;
+      canvas.height = camFeed.naturalHeight || camFeed.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(camFeed, 0, 0);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+
+      const wrapper = document.createElement('div');
+      wrapper.style.cssText = 'position:relative;border-radius:8px;overflow:hidden;border:1px solid var(--border);';
+      const img = document.createElement('img');
+      img.src = dataUrl;
+      img.style.cssText = 'width:100%;display:block;';
+      const time = document.createElement('div');
+      time.textContent = new Date().toLocaleTimeString();
+      time.style.cssText = 'position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.6);color:#fff;font-size:10px;padding:2px 6px;text-align:center;';
+      wrapper.appendChild(img);
+      wrapper.appendChild(time);
+
+      // 點擊可下載
+      wrapper.style.cursor = 'pointer';
+      wrapper.onclick = () => {
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = 'snapshot_' + Date.now() + '.jpg';
+        a.click();
+      };
+
+      camSnapshots.prepend(wrapper);
+      showToast('截圖已儲存', 'success');
+    };
+
+    // 手動餵食 — 計數 + 觸發場景
+    let feedStats = { vegetable: 0, beef: 0, reject: 0 };
+
+    function updateFeedUI() {
+      const total = feedStats.vegetable + feedStats.beef;
+      document.getElementById('feedCount').textContent = total;
+      document.getElementById('feedVeg').textContent = feedStats.vegetable;
+      document.getElementById('feedBeef').textContent = feedStats.beef;
+      document.getElementById('feedReject').textContent = feedStats.reject;
+    }
+
+    window.manualFeed = function (type) {
+      if (type === 'vegetable') {
+        feedStats.vegetable++;
+        triggerScene('yolo_deliver_vegetable');
+        showToast('吃青菜 #' + feedStats.vegetable, 'success');
+      } else if (type === 'beef') {
+        feedStats.beef++;
+        triggerScene('yolo_deliver_beef');
+        showToast('吃丸子 #' + feedStats.beef, 'success');
+      } else if (type === 'reject') {
+        feedStats.reject++;
+        triggerScene('yolo_reject');
+        showToast('不吃 #' + feedStats.reject, 'error');
+      }
+      updateFeedUI();
+    };
+
+    window.endInteraction = function () {
+      const total = feedStats.vegetable + feedStats.beef;
+      triggerScene('end_interaction');
+
+      // 通知 VisitorSession 互動完成 → 讓 APP 可以開始聊天
+      fetch('/api/chat/simulate-ready', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      }).catch(() => {});
+
+      // 關閉攝影機串流
+      if (camActive) toggleCamera();
+
+      // 重置計數
+      feedStats = { vegetable: 0, beef: 0, reject: 0 };
+      updateFeedUI();
+
+      showToast('互動結束 → 進入 APP 聊天（共餵食 ' + total + ' 次）', 'success');
+    };
+
+    // 啟動時自動停用 YOLO 自動偵測
+    function stopYoloPolling() {
+      executeDevice('yolo_detector', 'stop', {});
+    }
 
     // ==================================================
     //  Start
     // ==================================================
     connect();
     setInterval(requestStatus, 10000);
+
+    // 連線成功後停用 YOLO 自動偵測
+    setTimeout(stopYoloPolling, 2000);
   })();
   </script>
 </body>

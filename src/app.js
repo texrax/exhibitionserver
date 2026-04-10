@@ -102,6 +102,79 @@ async function main() {
     app.handle(req, res);
   });
 
+  // YOLO 攝影機影像代理 — 把 YoloTD Python server 的 MJPEG 串流轉發給前端
+  app.get("/api/camera/feed", (req, res) => {
+    const yoloDevice = deviceManager.get("yolo_detector");
+    const yoloUrl = (yoloDevice && yoloDevice.url) || "http://localhost:8000";
+
+    const url = new URL("/video_feed", yoloUrl);
+    const nativeHttp = url.protocol === "https:" ? require("https") : require("http");
+
+    const proxyReq = nativeHttp.get(url.href, { timeout: 5000 }, (proxyRes) => {
+      res.writeHead(proxyRes.statusCode, {
+        "Content-Type": proxyRes.headers["content-type"] || "multipart/x-mixed-replace; boundary=frame",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+      });
+      proxyRes.pipe(res);
+    });
+
+    proxyReq.on("error", () => {
+      if (!res.headersSent) {
+        res.status(502).json({ error: "YOLO 攝影機無法連線" });
+      }
+    });
+
+    req.on("close", () => proxyReq.destroy());
+  });
+
+  // YOLO 攝影機單張快照
+  app.get("/api/camera/snapshot", async (req, res) => {
+    const yoloDevice = deviceManager.get("yolo_detector");
+    const yoloUrl = (yoloDevice && yoloDevice.url) || "http://localhost:8000";
+
+    const url = new URL("/video_feed", yoloUrl);
+    const nativeHttp = url.protocol === "https:" ? require("https") : require("http");
+
+    const proxyReq = nativeHttp.get(url.href, { timeout: 5000 }, (proxyRes) => {
+      const chunks = [];
+      let headerParsed = false;
+      let jpegStart = false;
+
+      proxyRes.on("data", (chunk) => {
+        if (!headerParsed) {
+          const str = chunk.toString("binary");
+          const idx = str.indexOf("\r\n\r\n");
+          if (idx !== -1) {
+            headerParsed = true;
+            jpegStart = true;
+            chunks.push(Buffer.from(str.substring(idx + 4), "binary"));
+          }
+        } else {
+          const str = chunk.toString("binary");
+          const boundary = str.indexOf("--frame");
+          if (boundary !== -1) {
+            chunks.push(Buffer.from(str.substring(0, boundary), "binary"));
+            const jpeg = Buffer.concat(chunks);
+            res.writeHead(200, { "Content-Type": "image/jpeg", "Cache-Control": "no-cache" });
+            res.end(jpeg);
+            proxyReq.destroy();
+          } else {
+            chunks.push(chunk);
+          }
+        }
+      });
+    });
+
+    proxyReq.on("error", () => {
+      if (!res.headersSent) {
+        res.status(502).json({ error: "YOLO 攝影機無法連線" });
+      }
+    });
+
+    req.on("close", () => proxyReq.destroy());
+  });
+
   app.get("/", (req, res) => {
     res.sendFile(path.resolve(__dirname, "../public/index.html"));
   });
