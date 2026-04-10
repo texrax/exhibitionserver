@@ -60,6 +60,9 @@ BOWL_TOP_K = int(os.environ.get("BOWL_TOP_K", "2"))
 DETECT_EVERY_N = int(os.environ.get("DETECT_EVERY_N", "3"))  # 每 N 幀偵測一次
 JPEG_QUALITY = int(os.environ.get("JPEG_QUALITY", "70"))
 
+# === 裁切設定 (歸一化 0~1，格式: x1,y1,x2,y2) ===
+CAMERA_CROP = os.environ.get("CAMERA_CROP", "")
+
 # === OSC 設定 ===
 OSC_IP = os.environ.get("OSC_IP", "127.0.0.1")
 OSC_PORT = int(os.environ.get("OSC_PORT", "7000"))
@@ -316,14 +319,25 @@ def video_loop() -> None:
     else:
         video_capture = cv2.VideoCapture(camera_source)
     print(f"[Camera] opened={video_capture.isOpened()}, backend={video_capture.getBackendName()}", flush=True)
-    video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-    video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+    video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+    video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
     video_capture.set(cv2.CAP_PROP_FPS, 30)
     video_capture.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # 避免讀到舊幀
 
     if not video_capture.isOpened():
         print("[ERROR] 無法開啟攝影機")
         return
+
+    # 解析裁切區域
+    crop_rect = None
+    if CAMERA_CROP:
+        try:
+            parts = [float(v.strip()) for v in CAMERA_CROP.split(",")]
+            if len(parts) == 4:
+                crop_rect = parts
+                print(f"[Camera] 裁切區域: {crop_rect}", flush=True)
+        except ValueError:
+            print(f"[Camera] CAMERA_CROP 格式錯誤: {CAMERA_CROP}", flush=True)
 
     monitor_active = True
     frame_count = 0
@@ -334,6 +348,15 @@ def video_loop() -> None:
         if not success:
             time.sleep(0.2)
             continue
+
+        # 裁切畫面
+        if crop_rect:
+            h, w = frame.shape[:2]
+            cx1 = int(crop_rect[0] * w)
+            cy1 = int(crop_rect[1] * h)
+            cx2 = int(crop_rect[2] * w)
+            cy2 = int(crop_rect[3] * h)
+            frame = frame[cy1:cy2, cx1:cx2]
 
         frame_count += 1
         run_detect = (frame_count % DETECT_EVERY_N == 0)

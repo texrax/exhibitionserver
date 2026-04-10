@@ -55,6 +55,15 @@
         "cooldownMs": 3000,
         "startupTimeoutMs": 15000
       }
+    },
+    {
+      "id": "obs",
+      "type": "OBSDevice",
+      "config": {
+        "host": "localhost",
+        "port": 4455,
+        "password": ""
+      }
     }
   ]
 }

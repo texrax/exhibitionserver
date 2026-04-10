@@ -4,7 +4,9 @@
   "description": "展場中控系統 — 統一控制 VTube Studio、ESP32 燈光、音訊、攝像頭及自訂設備",
   "main": "src/app.js",
   "scripts": {
-    "start": "node src/app.js",
+    "start": "node src/start-all.js",
+    "start:node": "node src/app.js",
+    "start:yolo": "py yolo/src/server.py",
     "start:cloud": "node src/app.js --cloud",
     "bridge": "node src/bridge.js",
     "dev": "node --watch src/app.js"

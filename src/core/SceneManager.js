@@ -147,6 +147,16 @@ class SceneManager {
             continue;
           }
 
+          // 支援 waitForEvent 步驟 — 等待指定事件後才繼續
+          if (step.waitForEvent) {
+            await this._waitForEvent(
+              step.waitForEvent,
+              step.timeout || 60000,
+              step.condition
+            );
+            continue;
+          }
+
           const result = await this.deviceManager.executeOnDevice(
             step.device,
             step.action,
@@ -170,6 +180,32 @@ class SceneManager {
 
   _delay(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  /**
+   * 等待 EventBus 上的指定事件，可選條件過濾
+   * 超時後自動 resolve（不中斷場景流程）
+   */
+  _waitForEvent(eventName, timeout = 60000, condition = null) {
+    return new Promise((resolve) => {
+      console.log(`[SceneManager] 等待事件: ${eventName} (逾時 ${timeout}ms)`);
+
+      const timer = setTimeout(() => {
+        this.eventBus.removeListener(eventName, handler);
+        console.warn(`[SceneManager] waitForEvent "${eventName}" 逾時`);
+        resolve();
+      }, timeout);
+
+      const handler = (data) => {
+        if (condition && !this._checkCondition(condition, data)) return;
+        clearTimeout(timer);
+        this.eventBus.removeListener(eventName, handler);
+        console.log(`[SceneManager] 收到事件: ${eventName}`);
+        resolve();
+      };
+
+      this.eventBus.on(eventName, handler);
+    });
   }
 }
 

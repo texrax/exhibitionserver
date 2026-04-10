@@ -148,6 +148,18 @@
     ]
   },
 
+  "obs_video_then_vtuber": {
+    "description": "OBS 播影片 → 影片結束自動切 VTuber",
+    "actions": [
+      { "device": "wizlight_all", "action": "off", "params": {} },
+      { "device": "esp32_main", "action": "off", "params": {} },
+      { "delay": 500 },
+      { "device": "obs", "action": "switchScene", "params": { "sceneName": "Video" } },
+      { "waitForEvent": "obs:mediaEnded", "timeout": 300000 },
+      { "device": "obs", "action": "switchScene", "params": { "sceneName": "VTuber" } }
+    ]
+  },
+
   "all_off": {
     "description": "全部關閉",
     "actions": [

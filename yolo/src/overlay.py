@@ -24,7 +24,8 @@ def draw_scene_overlay(frame: np.ndarray, analysis_result: Dict[str, Any]) -> np
         if not rect:
             continue
         color, label = zone_styles.get(key, ((180, 180, 180), key.upper()))
-        cv2.rectangle(frame, (rect["x1"], rect["y1"]), (rect["x2"], rect["y2"]), color, 1)
+        thickness = 2 if "bowl" in key else 1
+        cv2.rectangle(frame, (rect["x1"], rect["y1"]), (rect["x2"], rect["y2"]), color, thickness)
         cv2.putText(frame, label, (rect["x1"] + 6, rect["y1"] + 18), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
 
     if not event:

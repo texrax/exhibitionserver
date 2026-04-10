@@ -211,13 +211,14 @@ class ObjectAnalyzer:
 
         # === DEBUG: 每 10 幀印出狀態 ===
         if self.frame_index % 10 == 0:
+            cp = chopsticks["center"] if chopsticks else None
             touching = self._chopsticks_touching_food(chopsticks, foods)
-            print(f"[DEBUG F{self.frame_index}] 筷子={'有' if chopsticks else '無'} | 食物={[f['label'] for f in foods]} | 觸碰={touching['label'] if touching else '無'} | active={'有' if self.active_event else '無'} | pending={self.pending_pickup['frames'] if self.pending_pickup else 0}", flush=True)
+            print(f"[DEBUG F{self.frame_index}] 筷子={cp} | 食物={[f['label'] for f in foods]} | 觸碰={touching['label'] if touching else '無'} | active={'有' if self.active_event else '無'}", flush=True)
 
         if self.active_event:
             self._advance_active_event(chopsticks, foods, scene)
         else:
-            self._update_pending_pickup(chopsticks, foods, scene)
+            self._update_pending_pickup_food(chopsticks, foods, scene)
 
         events: List[Dict[str, Any]] = []
         if self.active_event:
@@ -257,19 +258,19 @@ class ObjectAnalyzer:
         }
         return [self._serialize_event(event, scene, completed=False)]
 
-    def _update_pending_pickup(self, chopsticks: Optional[Dict[str, Any]], foods: List[Dict[str, Any]], scene: Dict[str, Any]) -> None:
+    def _update_pending_pickup_food(self, chopsticks: Optional[Dict[str, Any]], foods: List[Dict[str, Any]], scene: Dict[str, Any]) -> None:
+        """筷子碰到食物 → 夾取開始，送進碗區 → 送達"""
         if self.frame_index < self.cooldown_until_frame or not chopsticks:
             self.pending_pickup = None
             return
 
-        # 用 bbox 觸碰判定取代距離判定
         food = self._chopsticks_touching_food(chopsticks, foods)
         if not food:
             self.pending_pickup = None
             return
 
         source_side = self._classify_side(chopsticks["center"], scene)
-        key = (chopsticks.get("track_id"), food.get("track_id"), food["label"], source_side)
+        key = (chopsticks.get("track_id"), food.get("track_id"), food["label"])
         if self.pending_pickup and self.pending_pickup.get("key") == key:
             self.pending_pickup["frames"] += 1
         else:
@@ -277,8 +278,7 @@ class ObjectAnalyzer:
 
         if self.pending_pickup["frames"] >= self.event_config["attach_frames"]:
             target_side = self._other_side(source_side)
-            source_bowl = self._which_bowl(food["center"], scene)
-            print(f"[PICKUP] 夾取觸發！{food['label']} ({source_side}側) | 筷子({chopsticks['center']['x']},{chopsticks['center']['y']}) 進入食物bbox", flush=True)
+            print(f"[PICKUP] 夾取觸發！{food['label']} ({source_side}側) | 筷子({chopsticks['center']['x']},{chopsticks['center']['y']})", flush=True)
             self.active_event = {
                 "event_id": self.next_event_id,
                 "frame_started": self.frame_index,
@@ -293,7 +293,7 @@ class ObjectAnalyzer:
                 "coords": dict(chopsticks["center"]),
                 "source_side": source_side,
                 "target_side": target_side,
-                "source_bowl": source_bowl or f"{source_side}_bowl",
+                "source_bowl": f"{source_side}_bowl",
                 "target_bowl": f"{target_side}_bowl",
                 "target_person": self._person_track_id_for_side(target_side, scene),
                 "target_food": food["label"],
@@ -352,7 +352,7 @@ class ObjectAnalyzer:
         event["state"] = "moving_to_target"
         event["action"] = "carrying"
 
-        # 檢查是否進入碗區
+        # 檢查是否進入任一碗區 → 送達
         in_bowl = self._which_bowl(chopsticks["center"], scene)
         if in_bowl is not None:
             event["entered_target_bowl"] += 1
