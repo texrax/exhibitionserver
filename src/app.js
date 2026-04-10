@@ -12,8 +12,12 @@ const EventBus = require("./core/EventBus");
 const DeviceManager = require("./core/DeviceManager");
 const SceneManager = require("./core/SceneManager");
 const BridgeManager = require("./core/BridgeManager");
+const VisitorSession = require("./core/VisitorSession");
+const ClaudeClient = require("./core/ClaudeClient");
+const ChatManager = require("./core/ChatManager");
 const createApiRoutes = require("./routes/apiRoutes");
 const createSceneRoutes = require("./routes/sceneRoutes");
+const createChatRoutes = require("./routes/chatRoutes");
 
 const PORT = process.env.PORT || 3000;
 const IS_CLOUD = process.env.CLOUD === "1" || process.argv.includes("--cloud");
@@ -25,6 +29,9 @@ async function main() {
   const eventBus = new EventBus();
   const deviceManager = new DeviceManager(eventBus);
   const sceneManager = new SceneManager(eventBus, deviceManager);
+  const visitorSession = new VisitorSession(eventBus);
+  const claudeClient = new ClaudeClient(process.env.ANTHROPIC_API_KEY);
+  const chatManager = new ChatManager(eventBus, visitorSession, claudeClient);
   let bridgeManager = null;
 
   console.log(`=== 展場中控系統啟動中 (${IS_CLOUD ? "雲端模式" : "本地模式"}) ===`);
@@ -72,6 +79,7 @@ async function main() {
   // API 路由
   app.use("/api", createApiRoutes(deviceManager, eventBus));
   app.use("/api", createSceneRoutes(sceneManager));
+  app.use("/api", createChatRoutes(chatManager, visitorSession));
 
   
   // Bridge 狀態端點（雲端模式）
@@ -104,6 +112,9 @@ async function main() {
   // Dashboard WebSocket（/ws）
   const wss = new WebSocketServer({ noServer: true });
 
+  // App 聊天 WebSocket（/app）
+  const wssApp = new WebSocketServer({ noServer: true });
+
   // Bridge WebSocket（/bridge）— 只在雲端模式啟用
   const wssBridge = IS_CLOUD ? new WebSocketServer({ noServer: true }) : null;
 
@@ -113,6 +124,8 @@ async function main() {
 
     if (pathname === "/ws") {
       wss.handleUpgrade(req, socket, head, (ws) => wss.emit("connection", ws, req));
+    } else if (pathname === "/app") {
+      wssApp.handleUpgrade(req, socket, head, (ws) => wssApp.emit("connection", ws, req));
     } else if (pathname === "/bridge" && IS_CLOUD) {
       // 驗證 Bridge 密鑰
       const url = new URL(req.url, `http://${req.headers.host}`);
@@ -154,6 +167,11 @@ async function main() {
     });
   });
 
+  // App 聊天 WebSocket 連線處理
+  wssApp.on("connection", (ws) => {
+    chatManager.handleAppConnection(ws);
+  });
+
   // Bridge WebSocket 連線處理（雲端模式）
   if (wssBridge) {
     wssBridge.on("connection", (ws) => {
@@ -165,6 +183,7 @@ async function main() {
   server.listen(PORT, () => {
     console.log("=== 展場中控系統已就緒 ===");
     console.log(`  Dashboard: http://localhost:${PORT}`);
+    console.log(`  App Chat:  ws://localhost:${PORT}/app`);
     if (IS_CLOUD) {
       console.log(`  Bridge:    ws://localhost:${PORT}/bridge?secret=${BRIDGE_SECRET}`);
       console.log(`  模式:      雲端（等待展場 Bridge 連線）`);
