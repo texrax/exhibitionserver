@@ -160,6 +160,9 @@ class DeviceManager {
       }
 
       for (const [id, device] of this.devices) {
+        // YOLO 偵測器是手動模式，不自動重連
+        if (id === "yolo_detector") continue;
+
         // 如果裝置狀態不是 online，就嘗試重新調用 init()
         const status = device.getStatus();
         if (status.status !== "online") {

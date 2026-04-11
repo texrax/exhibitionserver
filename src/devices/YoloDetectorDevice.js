@@ -112,6 +112,7 @@ class YoloDetectorDevice extends BaseDevice {
     // spawn 錯誤（例如路徑不存在）
     this._process.on("error", (err) => {
       console.error(`[${this.id}] 無法啟動 YoloTD 子程序: ${err.message}`);
+      this._intentionalKill = true; // 阻止自動重啟
       this._process = null;
       this._setStatus("error", `無法啟動: ${err.message}`);
     });
@@ -132,21 +133,11 @@ class YoloDetectorDevice extends BaseDevice {
       }
     });
 
-    // 子程序退出 — 非預期時自動重啟
+    // 子程序退出（手動模式不自動重啟）
     this._process.on("close", (code) => {
       console.log(`[${this.id}] YoloTD 子程序已結束 (code: ${code})`);
       this._process = null;
-      if (!this._intentionalKill) {
-        console.warn(`[${this.id}] 非預期退出，5 秒後自動重啟...`);
-        this._setStatus("offline", `子程序退出 (code: ${code})`);
-        setTimeout(() => {
-          if (!this._intentionalKill) {
-            this._spawnServer().catch((err) => {
-              console.error(`[${this.id}] 重啟失敗:`, err.message);
-            });
-          }
-        }, 5000);
-      }
+      this._setStatus("offline", `子程序退出 (code: ${code})`);
     });
 
     // 等待伺服器就緒（不自動啟動輪詢，手動模式由控制台觸發）

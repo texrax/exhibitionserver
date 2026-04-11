@@ -1028,37 +1028,70 @@
     const camStatus = document.getElementById('camStatus');
     const camSnapshots = document.getElementById('camSnapshots');
 
-    window.toggleCamera = function () {
+    let camStartCancel = false;
+
+    async function waitForCameraReady(maxSeconds) {
+      const start = Date.now();
+      const deadline = start + maxSeconds * 1000;
+      let attempt = 0;
+      while (Date.now() < deadline && !camStartCancel) {
+        attempt++;
+        const elapsed = Math.round((Date.now() - start) / 1000);
+        camStatus.textContent = '啟動 YOLO 攝影機中... (' + elapsed + 's / 嘗試 ' + attempt + ')';
+        try {
+          const res = await fetch('/api/camera/snapshot?' + Date.now(), { cache: 'no-store' });
+          if (res.ok) return true;
+        } catch (e) {}
+        await new Promise(r => setTimeout(r, 2000));
+      }
+      return false;
+    }
+
+    window.toggleCamera = async function () {
       if (camActive) {
+        camStartCancel = true;
         camFeed.src = '';
         camFeed.style.display = 'none';
         camPlaceholder.style.display = '';
         camToggleBtn.textContent = '開啟';
         camStatus.textContent = '攝影機已關閉';
         camActive = false;
-      } else {
-        // 先啟動 YOLO server（如果還沒跑）
-        executeDevice('yolo_detector', 'start', {});
-        camPlaceholder.style.display = 'none';
-        camFeed.style.display = 'block';
-        // 給 server 一點啟動時間
-        camStatus.textContent = '啟動攝影機中...';
-        setTimeout(function () {
-          camFeed.src = '/api/camera/feed?' + Date.now();
-        }, 3000);
-        camToggleBtn.textContent = '關閉';
-        camActive = true;
-
-        camFeed.onload = () => { camStatus.textContent = '串流中'; };
-        camFeed.onerror = () => {
-          camStatus.textContent = 'YOLO 攝影機無法連線（確認偵測服務已啟動）';
-          camFeed.style.display = 'none';
-          camPlaceholder.style.display = '';
-          camPlaceholder.innerHTML = '無法連線攝影機<br><span style="font-size:12px;color:var(--text-dim);opacity:0.6;">確認 YOLO 偵測服務已啟動</span>';
-          camToggleBtn.textContent = '開啟';
-          camActive = false;
-        };
+        return;
       }
+
+      // 先啟動 YOLO server（如果還沒跑）
+      camStartCancel = false;
+      executeDevice('yolo_detector', 'start', {});
+
+      camPlaceholder.style.display = 'none';
+      camFeed.style.display = 'none';
+      camToggleBtn.textContent = '關閉';
+      camActive = true;
+      camStatus.textContent = '啟動 YOLO 攝影機中...';
+
+      // 輪詢等待 server 就緒（最多 30 秒）
+      const ready = await waitForCameraReady(30);
+
+      if (camStartCancel || !camActive) return;
+
+      if (!ready) {
+        camStatus.textContent = '攝影機啟動逾時';
+        camPlaceholder.style.display = '';
+        camPlaceholder.innerHTML = '啟動逾時<br><span style="font-size:12px;color:var(--text-dim);opacity:0.6;">YOLO server 沒有在 30 秒內就緒</span>';
+        camToggleBtn.textContent = '開啟';
+        camActive = false;
+        return;
+      }
+
+      // server 就緒，載入串流
+      camFeed.style.display = 'block';
+      camFeed.src = '/api/camera/feed?' + Date.now();
+      camStatus.textContent = '串流中';
+
+      camFeed.onload = () => { camStatus.textContent = '串流中'; };
+      camFeed.onerror = () => {
+        camStatus.textContent = '串流中斷';
+      };
     };
 
     window.snapshotCamera = function () {
