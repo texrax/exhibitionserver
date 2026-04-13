@@ -44,12 +44,22 @@ class OllamaClient {
         },
       });
 
-      const content = response.data?.message?.content;
+      let content = response.data?.message?.content || "";
+
+      // Gemma 4 即使 think:false 仍會在 content 中輸出思考過程，
+      // 真正的回覆在 <channel|> 標記之後，需要截取
+      const channelMarker = "<channel|>";
+      const markerIdx = content.lastIndexOf(channelMarker);
+      if (markerIdx !== -1) {
+        content = content.substring(markerIdx + channelMarker.length);
+      }
+
+      content = content.trim();
       if (!content) {
         throw new Error("Ollama 回覆內容為空");
       }
 
-      return content.trim();
+      return content;
     } catch (err) {
       if (err.response) {
         const status = err.response.status;

@@ -129,13 +129,13 @@ class ChatManager {
       // 讓 Claude 產生開場白
       const greeting = await this.claudeClient.sendMessage(
         systemPrompt,
-        [{ role: "user", content: "[系統：訪客拿起了手機，請用一句話打招呼，並自然地提到你們剛剛的互動]" }],
+        [{ role: "user", content: "[系統：訪客拿起了手機，請用一句話自然地延續剛才的互動氛圍，像是隨口聊聊剛才的體驗，例如「剛剛那頓飯真不錯」之類的語氣]" }],
         this.config.llm.maxTokens
       );
 
       this._turnCount++;
       // 把開場白記錄到對話歷史（但用 assistant 角色）
-      this._messages.push({ role: "user", content: "[系統：訪客拿起了手機，請用一句話打招呼，並自然地提到你們剛剛的互動]" });
+      this._messages.push({ role: "user", content: "[系統：訪客拿起了手機，請用一句話自然地延續剛才的互動氛圍，像是隨口聊聊剛才的體驗，例如「剛剛那頓飯真不錯」之類的語氣]" });
       this._messages.push({ role: "assistant", content: greeting });
 
       this._send({
