@@ -13,7 +13,7 @@ const DeviceManager = require("./core/DeviceManager");
 const SceneManager = require("./core/SceneManager");
 const BridgeManager = require("./core/BridgeManager");
 const VisitorSession = require("./core/VisitorSession");
-const ClaudeClient = require("./core/ClaudeClient");
+const OllamaClient = require("./core/OllamaClient");
 const ChatManager = require("./core/ChatManager");
 const createApiRoutes = require("./routes/apiRoutes");
 const createSceneRoutes = require("./routes/sceneRoutes");
@@ -30,7 +30,7 @@ async function main() {
   const deviceManager = new DeviceManager(eventBus);
   const sceneManager = new SceneManager(eventBus, deviceManager);
   const visitorSession = new VisitorSession(eventBus);
-  const claudeClient = new ClaudeClient(process.env.ANTHROPIC_API_KEY);
+  const claudeClient = new OllamaClient("gemma4:e4b");
   const chatManager = new ChatManager(eventBus, visitorSession, claudeClient);
   let bridgeManager = null;
 

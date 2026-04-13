@@ -47,6 +47,29 @@ public/
   index.html         ← 中控 Dashboard
 ```
 
+## 本地 LLM（Gemma 4 + Ollama）
+
+展場無外網環境下，使用 Ollama 在本地跑 Gemma 4 模型替代 Claude API。
+
+### 安裝
+
+```bash
+# 安裝 Ollama
+brew install ollama
+brew services start ollama
+
+# 拉取模型
+ollama pull gemma4:e4b
+```
+
+### 切換 LLM
+
+在 `src/app.js` 中切換：
+- **本地 Gemma 4**：`const OllamaClient = require("./core/OllamaClient")` + `new OllamaClient("gemma4:e4b")`
+- **雲端 Claude**：`const ClaudeClient = require("./core/ClaudeClient")` + `new ClaudeClient(process.env.ANTHROPIC_API_KEY)`
+
+模型設定在 `config/chat.json` 的 `llm` 欄位。
+
 ## API 端點
 
 ### 裝置控制

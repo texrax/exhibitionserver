@@ -130,7 +130,7 @@ class ChatManager {
       const greeting = await this.claudeClient.sendMessage(
         systemPrompt,
         [{ role: "user", content: "[系統：訪客拿起了手機，請用一句話打招呼，並自然地提到你們剛剛的互動]" }],
-        this.config.claude.maxTokens
+        this.config.llm.maxTokens
       );
 
       this._turnCount++;
@@ -182,7 +182,7 @@ class ChatManager {
       const reply = await this.claudeClient.sendMessage(
         systemPrompt,
         this._messages,
-        this.config.claude.maxTokens
+        this.config.llm.maxTokens
       );
 
       this._turnCount++;
