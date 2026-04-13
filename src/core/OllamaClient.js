@@ -37,6 +37,7 @@ class OllamaClient {
         model: this.model,
         messages: ollamaMessages,
         stream: false,
+        think: false,
         options: {
           num_predict: maxTokens,
           temperature: 0.8,

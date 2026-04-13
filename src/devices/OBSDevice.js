@@ -4,6 +4,8 @@
 
 const WebSocket = require("ws");
 const crypto = require("crypto");
+const fs = require("fs");
+const path = require("path");
 const { v4: uuidv4 } = require("uuid");
 const BaseDevice = require("./BaseDevice");
 
@@ -53,6 +55,13 @@ class OBSDevice extends BaseDevice {
     }
 
     switch (action) {
+      case "setSubtitle": {
+        const subtitlePath = path.resolve(__dirname, "../../public/subtitle.txt");
+        const bom = "\uFEFF";
+        fs.writeFileSync(subtitlePath, bom + (params.text || ""), "utf8");
+        return { status: "ok", text: params.text || "" };
+      }
+
       case "switchScene":
         return this._sendRequest("SetCurrentProgramScene", {
           sceneName: params.sceneName,

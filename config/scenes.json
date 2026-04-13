@@ -33,11 +33,13 @@
   "play_day_1": {
     "description": "星期一 — 冷紫閃爍 + 數位焦慮",
     "actions": [
+      { "device": "obs", "action": "setSubtitle", "params": { "text": "那天剛好要去參加開齋節的活動" } },
       { "device": "vtubestudio", "action": "setExpression", "params": { "file": "哀傷.exp3.json", "active": true, "fadeTime": 0.3 } },
       { "device": "audio", "action": "play", "params": { "file": "開齋節.wav" } },
       { "device": "bulb_1", "action": "flickerEffect", "params": { "r": 130, "g": 10, "b": 220, "min": 30, "max": 70 } },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "blink" } },
       { "delay": 6000 },
+      { "device": "obs", "action": "setSubtitle", "params": { "text": "" } },
       { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } },
       { "device": "bulb_1", "action": "stopEffect", "params": {} },
       { "device": "bulb_1", "action": "off", "params": {} },
@@ -48,11 +50,13 @@
   "play_day_2": {
     "description": "星期二 — 冷紫閃爍 + 數位焦慮",
     "actions": [
+      { "device": "obs", "action": "setSubtitle", "params": { "text": "今天不能放假" } },
       { "device": "vtubestudio", "action": "setExpression", "params": { "file": "哀傷.exp3.json", "active": true, "fadeTime": 0.3 } },
       { "device": "audio", "action": "play", "params": { "file": "今天不能放假.wav" } },
       { "device": "bulb_1", "action": "flickerEffect", "params": { "r": 130, "g": 10, "b": 220, "min": 30, "max": 70 } },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "blink" } },
       { "delay": 3000 },
+      { "device": "obs", "action": "setSubtitle", "params": { "text": "" } },
       { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } },
       { "device": "bulb_1", "action": "stopEffect", "params": {} },
       { "device": "bulb_1", "action": "off", "params": {} },
@@ -63,11 +67,13 @@
   "play_day_3": {
     "description": "星期三 — 琥珀色波浪 + 開心 (暖心週三)",
     "actions": [
+      { "device": "obs", "action": "setSubtitle", "params": { "text": "剛好可以放假" } },
       { "device": "vtubestudio", "action": "setExpression", "params": { "file": "開心(睜眼).exp3.json", "active": true, "fadeTime": 0.3 } },
       { "device": "audio", "action": "play", "params": { "file": "可以.wav" } },
       { "device": "bulb_1", "action": "setColor", "params": { "r": 255, "g": 160, "b": 20, "brightness": 100 } },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "block_wave" } },
       { "delay": 4000 },
+      { "device": "obs", "action": "setSubtitle", "params": { "text": "" } },
       { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } },
       { "device": "bulb_1", "action": "off", "params": {} },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } }
@@ -77,11 +83,13 @@
   "play_day_4": {
     "description": "星期四 — 冷紫閃爍 + 數位焦慮",
     "actions": [
+      { "device": "obs", "action": "setSubtitle", "params": { "text": "今天不能放假" } },
       { "device": "vtubestudio", "action": "setExpression", "params": { "file": "哀傷.exp3.json", "active": true, "fadeTime": 0.3 } },
       { "device": "audio", "action": "play", "params": { "file": "今天不能放假.wav" } },
       { "device": "bulb_1", "action": "flickerEffect", "params": { "r": 130, "g": 10, "b": 220, "min": 30, "max": 70 } },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "blink" } },
       { "delay": 3000 },
+      { "device": "obs", "action": "setSubtitle", "params": { "text": "" } },
       { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } },
       { "device": "bulb_1", "action": "stopEffect", "params": {} },
       { "device": "bulb_1", "action": "off", "params": {} },
@@ -92,11 +100,13 @@
   "play_day_5": {
     "description": "星期五 — 冷紫閃爍 + 數位焦慮",
     "actions": [
+      { "device": "obs", "action": "setSubtitle", "params": { "text": "阿嬤在醫院不能放假" } },
       { "device": "vtubestudio", "action": "setExpression", "params": { "file": "哀傷.exp3.json", "active": true, "fadeTime": 0.3 } },
       { "device": "audio", "action": "play", "params": { "file": "醫院不能放假.wav" } },
       { "device": "bulb_1", "action": "flickerEffect", "params": { "r": 130, "g": 10, "b": 220, "min": 30, "max": 70 } },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "blink" } },
       { "delay": 4000 },
+      { "device": "obs", "action": "setSubtitle", "params": { "text": "" } },
       { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } },
       { "device": "bulb_1", "action": "stopEffect", "params": {} },
       { "device": "bulb_1", "action": "off", "params": {} },
@@ -107,11 +117,13 @@
   "play_day_6": {
     "description": "星期六 — 冷紫閃爍 + 數位焦慮",
     "actions": [
+      { "device": "obs", "action": "setSubtitle", "params": { "text": "阿嬤在醫院不能放假" } },
       { "device": "vtubestudio", "action": "setExpression", "params": { "file": "哀傷.exp3.json", "active": true, "fadeTime": 0.3 } },
       { "device": "audio", "action": "play", "params": { "file": "醫院不能放假.wav" } },
       { "device": "bulb_1", "action": "flickerEffect", "params": { "r": 130, "g": 10, "b": 220, "min": 30, "max": 70 } },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "blink" } },
       { "delay": 4000 },
+      { "device": "obs", "action": "setSubtitle", "params": { "text": "" } },
       { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } },
       { "device": "bulb_1", "action": "stopEffect", "params": {} },
       { "device": "bulb_1", "action": "off", "params": {} },
@@ -122,11 +134,13 @@
   "play_day_7": {
     "description": "星期日 — 冷紫閃爍 + 數位焦慮",
     "actions": [
+      { "device": "obs", "action": "setSubtitle", "params": { "text": "今天不能放假" } },
       { "device": "vtubestudio", "action": "setExpression", "params": { "file": "哀傷.exp3.json", "active": true, "fadeTime": 0.3 } },
       { "device": "audio", "action": "play", "params": { "file": "今天不能放假.wav" } },
       { "device": "bulb_1", "action": "flickerEffect", "params": { "r": 130, "g": 10, "b": 220, "min": 30, "max": 70 } },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "blink" } },
       { "delay": 3000 },
+      { "device": "obs", "action": "setSubtitle", "params": { "text": "" } },
       { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } },
       { "device": "bulb_1", "action": "stopEffect", "params": {} },
       { "device": "bulb_1", "action": "off", "params": {} },
