@@ -285,16 +285,18 @@ class ChatManager {
     prompt += `- 對話要自然地結合剛才的互動經歷\n`;
     prompt += `- 不要用 emoji 表情符號\n`;
 
-    // 輪次控制 — 漸進式收尾
-    const { wrapUpStartTurn, maxTurns } = limits;
+    // 輪次控制 — 漸進式自然收尾
+    const { maxTurns } = limits;
 
-    if (this._turnCount >= wrapUpStartTurn && this._turnCount < maxTurns - 1) {
-      prompt += `\n## 重要提示\n`;
-      prompt += `你開始覺得時間差不多了，請自然地暗示你快要離開了。`;
-      prompt += `可以說類似「我差不多該走了」「時間過好快喔」之類的話，但不要太突兀。\n`;
-    } else if (this._turnCount >= maxTurns - 1) {
-      prompt += `\n## 重要提示\n`;
-      prompt += `這是最後一次回覆了！請溫柔地跟訪客道別，說一句讓人印象深刻的告別語。\n`;
+    if (this._turnCount >= 9 && this._turnCount <= 11) {
+      prompt += `\n## 對話節奏\n`;
+      prompt += `對話已經聊了一陣子，你開始意識到時間在流逝。回覆可以稍微簡短一些，話題自然地往感受或回憶的方向收束，但不要直接說要走了。\n`;
+    } else if (this._turnCount >= 12 && this._turnCount <= 13) {
+      prompt += `\n## 對話節奏\n`;
+      prompt += `你差不多該回去了，可以自然地提到你等等還有事、或是該回去照顧阿公了。語氣帶著一點不捨但也很平靜，同時還是要回應對方說的話。\n`;
+    } else if (this._turnCount >= 14) {
+      prompt += `\n## 對話節奏\n`;
+      prompt += `這是對話尾聲了，請自然地收尾。不需要刻意說「再見」，用一句簡單溫暖的話作結，像朋友之間那種「那我先走囉」「下次再聊」的感覺。\n`;
     }
 
     return prompt;

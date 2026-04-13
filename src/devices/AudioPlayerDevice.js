@@ -2,6 +2,7 @@
 // 播放完畢時透過 EventBus 發送 audio:finished 事件
 
 const path = require("path");
+const { execFile } = require("child_process");
 const player = require("node-wav-player");
 const BaseDevice = require("./BaseDevice");
 
@@ -20,7 +21,7 @@ class AudioPlayerDevice extends BaseDevice {
   async execute(action, params = {}) {
     switch (action) {
       case "play":
-        return this._play(params.file);
+        return this._play(params.file, params.duration);
       case "stop":
         return this._stop();
       case "isPlaying":
@@ -53,7 +54,7 @@ class AudioPlayerDevice extends BaseDevice {
 
   // ---- 私有方法 ----
 
- async _play(file) {
+ async _play(file, duration) {
     if (this.isPlaying) {
       console.log(`[${this.id}] 忽略播放請求 — 音樂播放中: ${this.currentFile}`);
       return { status: "busy", currentFile: this.currentFile };
@@ -66,42 +67,59 @@ class AudioPlayerDevice extends BaseDevice {
     this.eventBus.publish(`${this.id}:playing`, { file });
 
     try {
-      // 💡 關鍵改動：將 sync 改為 false
-      // 這樣 Node.js 呼叫完播放指令後會立刻繼續往下走，不會被卡住
-      player.play({ path: filePath, sync: false }).then(() => {
-        // 雖然 sync 為 false，但部分播放器在播放完畢後仍會觸發 resolve
-        // 如果你的環境還是太慢，我們就在這裡手動解鎖
-      }).catch(err => {
-        console.error(`[${this.id}] 播放過程出錯:`, err.message);
-      });
-
-      // 💡 為了讓 SceneManager 能夠立刻執行後續的燈光 delay
-      // 我們直接回傳 OK，不要在這裡 await player.play
-      
+      const ext = path.extname(file).toLowerCase();
+      if (ext === ".mp3") {
+        // MP3 用 PowerShell MediaPlayer 播放
+        const psScript = `
+          Add-Type -AssemblyName PresentationCore
+          $p = New-Object System.Windows.Media.MediaPlayer
+          $p.Open([Uri]'${filePath.replace(/\\/g, "\\\\")}')
+          Start-Sleep -Milliseconds 300
+          $p.Play()
+          while($p.Position -lt $p.NaturalDuration.TimeSpan -and $p.NaturalDuration.HasTimeSpan){ Start-Sleep -Milliseconds 200 }
+          $p.Close()
+        `;
+        this._psProcess = execFile("powershell", ["-NoProfile", "-Command", psScript], (err) => {
+          this._psProcess = null;
+          if (err && !this._intentionalStop) {
+            console.error(`[${this.id}] MP3 播放出錯:`, err.message);
+          }
+        });
+      } else {
+        // WAV 用 node-wav-player
+        player.play({ path: filePath, sync: false }).catch(err => {
+          console.error(`[${this.id}] 播放過程出錯:`, err.message);
+        });
+      }
     } catch (err) {
       console.error(`[${this.id}] 播放指令啟動失敗:`, err.message);
     } finally {
-      // 💡 宇恒注意：因為我們改為非同步，這裡需要根據音檔大約長度來「手動解鎖」
-      // 或者是直接設定為 false 讓下一次觸發可以進行
-      // 為了保險，我們這裡讓它 1 秒後就恢復可播放狀態
+      const unlockMs = duration ? duration * 1000 : 1000;
+      if (duration) {
+        setTimeout(() => { this._stop(); }, duration * 1000);
+      }
       setTimeout(() => {
         this.isPlaying = false;
         this.currentFile = null;
         this.eventBus.publish(`${this.id}:finished`, { file });
         console.log(`[${this.id}] 播放器已就緒 (解鎖)`);
-      }, 1000); 
+      }, unlockMs + 200);
     }
 
     return { status: "ok" };
   }
 
   _stop() {
-    if (this.isPlaying) {
-      try { player.stop(); } catch {}
-      this.isPlaying = false;
-      this.currentFile = null;
-      this.eventBus.publish(`${this.id}:stopped`, {});
+    this._intentionalStop = true;
+    try { player.stop(); } catch {}
+    if (this._psProcess) {
+      try { this._psProcess.kill(); } catch {}
+      this._psProcess = null;
     }
+    this._intentionalStop = false;
+    this.isPlaying = false;
+    this.currentFile = null;
+    this.eventBus.publish(`${this.id}:stopped`, {});
   }
 }
 

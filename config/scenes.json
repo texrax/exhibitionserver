@@ -201,6 +201,8 @@
       { "device": "spotlight_2", "action": "off", "params": {} },
       { "device": "bulb_1", "action": "off", "params": {} },
       { "device": "bulb_2", "action": "off", "params": {} },
+      { "device": "audio", "action": "play", "params": { "file": "line_notify.mp3", "duration": 2 } },
+      { "delay": 2000 },
       { "device": "bulb_3", "action": "setTemp", "params": { "temp": 4000, "brightness": 100 } }
     ]
   },

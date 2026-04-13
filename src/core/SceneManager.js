@@ -18,7 +18,7 @@ class SceneManager {
     // 取消正在執行的場景用
     this._abortController = null;
     // 可以強制取消其他場景的場景名單
-    this._forceScenes = new Set(["start", "all_off"]);
+    this._forceScenes = new Set(["start", "all_off", "end_interaction"]);
   }
 
   /**
