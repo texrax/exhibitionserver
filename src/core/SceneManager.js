@@ -152,9 +152,14 @@ class SceneManager {
   }
 
   async _executeScene(sceneName, scene) {
-    this._activeScene = sceneName;
+    const isExclusive = scene.exclusive !== false;
+    if (isExclusive) {
+      this._activeScene = sceneName;
+    }
     const abort = { aborted: false };
-    this._abortController = abort;
+    if (isExclusive) {
+      this._abortController = abort;
+    }
     this.eventBus.publish("scene:started", { scene: sceneName });
     console.log(`[SceneManager] ▶ 執行場景: ${sceneName}`);
 
@@ -199,10 +204,12 @@ class SceneManager {
         }
       }
     } finally {
-      if (this._abortController === abort) {
-        this._abortController = null;
+      if (isExclusive) {
+        if (this._abortController === abort) {
+          this._abortController = null;
+        }
+        this._activeScene = null;
       }
-      this._activeScene = null;
       this.eventBus.publish("scene:finished", { scene: sceneName, results });
       console.log(`[SceneManager] ■ 場景完成: ${sceneName}`);
     }

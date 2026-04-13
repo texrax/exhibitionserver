@@ -147,7 +147,7 @@
       { "device": "bulb_3", "action": "off", "params": {} },
       { "device": "esp32_main", "action": "off", "params": {} },
       { "device": "bulb_2", "action": "setTemp", "params": { "temp": 4000, "brightness": 100 } },
-      { "device": "spotlight_2", "action": "on", "params": {} },
+      { "device": "spotlight_2", "action": "setTemp", "params": { "temp": 4000, "brightness": 100 } },
       { "device": "yolo_detector", "action": "start", "params": {} }
     ]
   },
