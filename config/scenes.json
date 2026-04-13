@@ -1,13 +1,18 @@
 {
   "start": {
-    "description": "展間開始 — 播影片 → 切 VTuber → 啟動餐桌偵測",
+    "description": "展間開始 — 重置狀態、關燈、播影片、切VTuber、亮左壁燈",
     "actions": [
-      { "device": "spotlight_1", "action": "setTemp", "params": { "temp": 4000, "brightness": 100 } },
+      { "device": "yolo_detector", "action": "stop", "params": {} },
+      { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.3 } },
+      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "待機" } },
+      { "device": "wizlight_all", "action": "off", "params": {} },
+      { "device": "esp32_main", "action": "off", "params": {} },
+      { "delay": 500 },
       { "device": "obs", "action": "switchScene", "params": { "sceneName": "Video" } },
       { "device": "obs", "action": "triggerMediaInput", "params": { "inputName": "Media", "mediaAction": "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_RESTART" } },
-      { "waitForEvent": "obs:mediaEnded", "timeout": 300000, "condition": { "inputName": "Media" } },
+      { "waitForEvent": "obs:mediaEnded", "timeout": 300000 },
       { "device": "obs", "action": "switchScene", "params": { "sceneName": "VTuber" } },
-      { "device": "yolo_detector", "action": "start", "params": {} }
+      { "device": "bulb_1", "action": "setTemp", "params": { "temp": 4000, "brightness": 100 } }
     ]
   },
 
@@ -28,104 +33,136 @@
   "play_day_1": {
     "description": "星期一 — 冷紫閃爍 + 數位焦慮",
     "actions": [
+      { "device": "vtubestudio", "action": "moveModel", "params": { "timeInSeconds": 0.4, "size": 10, "positionY": 0.05, "relative": true } },
+      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "哀傷.exp3.json", "active": true, "fadeTime": 0.3 } },
+      { "device": "audio", "action": "play", "params": { "file": "開齋節.wav" } },
       { "device": "bulb_1", "action": "flickerEffect", "params": { "r": 130, "g": 10, "b": 220, "min": 30, "max": 70 } },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "blink" } },
-      { "device": "audio", "action": "play", "params": { "file": "開齋節.wav" } },
-      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "哀傷.exp3.json", "active": true, "fadeTime": 0.3 } },
       { "delay": 6000 },
+      { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } },
+      { "device": "vtubestudio", "action": "moveModel", "params": { "timeInSeconds": 0.4, "size": -10, "positionY": -0.05, "relative": true } },
       { "device": "bulb_1", "action": "stopEffect", "params": {} },
       { "device": "bulb_1", "action": "off", "params": {} },
-      { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } },
-      { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } }
+      { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } }
     ]
   },
 
   "play_day_2": {
     "description": "星期二 — 冷紫閃爍 + 數位焦慮",
     "actions": [
+      { "device": "vtubestudio", "action": "moveModel", "params": { "timeInSeconds": 0.4, "size": 10, "positionY": 0.05, "relative": true } },
+      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "哀傷.exp3.json", "active": true, "fadeTime": 0.3 } },
+      { "device": "audio", "action": "play", "params": { "file": "今天不能放假.wav" } },
       { "device": "bulb_1", "action": "flickerEffect", "params": { "r": 130, "g": 10, "b": 220, "min": 30, "max": 70 } },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "blink" } },
-      { "device": "audio", "action": "play", "params": { "file": "今天不能放假.wav" } },
-      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "哀傷.exp3.json", "active": true, "fadeTime": 0.3 } },
       { "delay": 3000 },
+      { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } },
+      { "device": "vtubestudio", "action": "moveModel", "params": { "timeInSeconds": 0.4, "size": -10, "positionY": -0.05, "relative": true } },
       { "device": "bulb_1", "action": "stopEffect", "params": {} },
       { "device": "bulb_1", "action": "off", "params": {} },
-      { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } },
-      { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } }
+      { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } }
     ]
   },
 
   "play_day_3": {
     "description": "星期三 — 琥珀色波浪 + 開心 (暖心週三)",
     "actions": [
+      { "device": "vtubestudio", "action": "moveModel", "params": { "timeInSeconds": 0.4, "size": 10, "positionY": 0.05, "relative": true } },
+      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "開心(睜眼).exp3.json", "active": true, "fadeTime": 0.3 } },
+      { "device": "audio", "action": "play", "params": { "file": "可以.wav" } },
       { "device": "bulb_1", "action": "setColor", "params": { "r": 255, "g": 160, "b": 20, "brightness": 100 } },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "block_wave" } },
-      { "device": "audio", "action": "play", "params": { "file": "可以.wav" } },
-      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "開心(睜眼).exp3.json", "active": true, "fadeTime": 0.3 } },
       { "delay": 4000 },
+      { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } },
+      { "device": "vtubestudio", "action": "moveModel", "params": { "timeInSeconds": 0.4, "size": -10, "positionY": -0.05, "relative": true } },
       { "device": "bulb_1", "action": "off", "params": {} },
-      { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } },
-      { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } }
+      { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } }
     ]
   },
 
   "play_day_4": {
     "description": "星期四 — 冷紫閃爍 + 數位焦慮",
     "actions": [
+      { "device": "vtubestudio", "action": "moveModel", "params": { "timeInSeconds": 0.4, "size": 10, "positionY": 0.05, "relative": true } },
+      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "哀傷.exp3.json", "active": true, "fadeTime": 0.3 } },
+      { "device": "audio", "action": "play", "params": { "file": "今天不能放假.wav" } },
       { "device": "bulb_1", "action": "flickerEffect", "params": { "r": 130, "g": 10, "b": 220, "min": 30, "max": 70 } },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "blink" } },
-      { "device": "audio", "action": "play", "params": { "file": "今天不能放假.wav" } },
-      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "哀傷.exp3.json", "active": true, "fadeTime": 0.3 } },
       { "delay": 3000 },
+      { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } },
+      { "device": "vtubestudio", "action": "moveModel", "params": { "timeInSeconds": 0.4, "size": -10, "positionY": -0.05, "relative": true } },
       { "device": "bulb_1", "action": "stopEffect", "params": {} },
       { "device": "bulb_1", "action": "off", "params": {} },
-      { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } },
-      { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } }
+      { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } }
     ]
   },
 
   "play_day_5": {
     "description": "星期五 — 冷紫閃爍 + 數位焦慮",
     "actions": [
+      { "device": "vtubestudio", "action": "moveModel", "params": { "timeInSeconds": 0.4, "size": 10, "positionY": 0.05, "relative": true } },
+      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "哀傷.exp3.json", "active": true, "fadeTime": 0.3 } },
+      { "device": "audio", "action": "play", "params": { "file": "醫院不能放假.wav" } },
       { "device": "bulb_1", "action": "flickerEffect", "params": { "r": 130, "g": 10, "b": 220, "min": 30, "max": 70 } },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "blink" } },
-      { "device": "audio", "action": "play", "params": { "file": "醫院不能放假.wav" } },
-      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "哀傷.exp3.json", "active": true, "fadeTime": 0.3 } },
       { "delay": 4000 },
+      { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } },
+      { "device": "vtubestudio", "action": "moveModel", "params": { "timeInSeconds": 0.4, "size": -10, "positionY": -0.05, "relative": true } },
       { "device": "bulb_1", "action": "stopEffect", "params": {} },
       { "device": "bulb_1", "action": "off", "params": {} },
-      { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } },
-      { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } }
+      { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } }
     ]
   },
 
   "play_day_6": {
     "description": "星期六 — 冷紫閃爍 + 數位焦慮",
     "actions": [
+      { "device": "vtubestudio", "action": "moveModel", "params": { "timeInSeconds": 0.4, "size": 10, "positionY": 0.05, "relative": true } },
+      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "哀傷.exp3.json", "active": true, "fadeTime": 0.3 } },
+      { "device": "audio", "action": "play", "params": { "file": "醫院不能放假.wav" } },
       { "device": "bulb_1", "action": "flickerEffect", "params": { "r": 130, "g": 10, "b": 220, "min": 30, "max": 70 } },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "blink" } },
-      { "device": "audio", "action": "play", "params": { "file": "醫院不能放假.wav" } },
-      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "哀傷.exp3.json", "active": true, "fadeTime": 0.3 } },
       { "delay": 4000 },
+      { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } },
+      { "device": "vtubestudio", "action": "moveModel", "params": { "timeInSeconds": 0.4, "size": -10, "positionY": -0.05, "relative": true } },
       { "device": "bulb_1", "action": "stopEffect", "params": {} },
       { "device": "bulb_1", "action": "off", "params": {} },
-      { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } },
-      { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } }
+      { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } }
     ]
   },
 
   "play_day_7": {
     "description": "星期日 — 冷紫閃爍 + 數位焦慮",
     "actions": [
+      { "device": "vtubestudio", "action": "moveModel", "params": { "timeInSeconds": 0.4, "size": 10, "positionY": 0.05, "relative": true } },
+      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "哀傷.exp3.json", "active": true, "fadeTime": 0.3 } },
+      { "device": "audio", "action": "play", "params": { "file": "今天不能放假.wav" } },
       { "device": "bulb_1", "action": "flickerEffect", "params": { "r": 130, "g": 10, "b": 220, "min": 30, "max": 70 } },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "blink" } },
-      { "device": "audio", "action": "play", "params": { "file": "今天不能放假.wav" } },
-      { "device": "vtubestudio", "action": "setExpression", "params": { "file": "哀傷.exp3.json", "active": true, "fadeTime": 0.3 } },
       { "delay": 3000 },
+      { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } },
+      { "device": "vtubestudio", "action": "moveModel", "params": { "timeInSeconds": 0.4, "size": -10, "positionY": -0.05, "relative": true } },
       { "device": "bulb_1", "action": "stopEffect", "params": {} },
       { "device": "bulb_1", "action": "off", "params": {} },
-      { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } },
-      { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } }
+      { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } }
+    ]
+  },
+
+  "after_day_selection": {
+    "description": "選到正確日子(星期三) — VTuber 換衣服拿碗筷，進入餐桌互動",
+    "trigger": { "event": "visitor:day_completed", "condition": { "day": 3 } },
+    "exclusive": false,
+    "actions": [
+      { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.3 } },
+      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "更換衣服" } },
+      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃飯手開關" } },
+      { "device": "spotlight_1", "action": "off", "params": {} },
+      { "device": "bulb_1", "action": "off", "params": {} },
+      { "device": "bulb_3", "action": "off", "params": {} },
+      { "device": "esp32_main", "action": "off", "params": {} },
+      { "device": "bulb_2", "action": "setTemp", "params": { "temp": 4000, "brightness": 100 } },
+      { "device": "spotlight_2", "action": "on", "params": {} },
+      { "device": "yolo_detector", "action": "start", "params": {} }
     ]
   },
 
@@ -156,6 +193,8 @@
   "all_off": {
     "description": "全部關閉",
     "actions": [
+      { "device": "obs", "action": "switchScene", "params": { "sceneName": "Video" } },
+      { "device": "yolo_detector", "action": "stop", "params": {} },
       { "device": "wizlight_all", "action": "stopEffect", "params": {} },
       { "device": "wizlight_all", "action": "off", "params": {} },
       { "device": "esp32_main", "action": "off", "params": {} },
