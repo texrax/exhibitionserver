@@ -25,16 +25,12 @@ npm start
 config/
   devices.json   ← 裝置定義（IP、埠號、參數）
   scenes.json    ← 場景腳本（觸發條件 → 動作序列）
-  chat.json      ← 聊天角色設定與對話參數
 src/
   app.js         ← 主程式入口
   core/
     EventBus.js      ← 事件匯流排
     DeviceManager.js ← 裝置生命週期管理
     SceneManager.js  ← 場景編排引擎
-    VisitorSession.js ← 訪客互動狀態追蹤
-    ClaudeClient.js  ← Claude API 客戶端
-    ChatManager.js   ← 聊天生命週期管理（LLM 對話 + App WebSocket）
   devices/
     BaseDevice.js         ← 裝置抽象基類
     VTubeStudioDevice.js  ← VTube Studio WebSocket
@@ -47,7 +43,6 @@ src/
   routes/
     apiRoutes.js     ← REST API（裝置控制 + 向下相容端點）
     sceneRoutes.js   ← 場景觸發 API
-    chatRoutes.js    ← 聊天 Debug API（狀態查詢 / 重置 / 模擬）
 public/
   index.html         ← 中控 Dashboard
 ```
@@ -69,13 +64,6 @@ public/
 | POST | `/api/scenes/:name/trigger` | 觸發場景 |
 | POST | `/api/scenes/reload` | 重新載入場景設定 |
 
-### 聊天 / Session 控制
-| Method | Path | 說明 |
-|--------|------|------|
-| GET | `/api/chat/status` | 查看聊天 + Session 狀態 |
-| POST | `/api/chat/reset` | 強制重置聊天與 Session |
-| POST | `/api/chat/simulate-ready` | 模擬互動完成（測試用，body: `{day, food}`） |
-
 ### 向下相容（原 TouchLightServer）
 | Method | Path | 說明 |
 |--------|------|------|
@@ -83,20 +71,7 @@ public/
 | POST | `/esp32/touch` | ESP32 觸摸觸發 |
 
 ### WebSocket
-- `ws://localhost:3000/ws` — Dashboard 即時事件與控制
-- `ws://localhost:3000/app` — Android 聊天 App 連線
-
-### App 聊天流程
-
-展場手機上的 Android App 透過 `/app` WebSocket 與中控連線，完整互動流程：
-
-1. 訪客在展場完成兩個互動（選日子 + 夾菜）
-2. Server 偵測到互動完成，推送 `interactions_complete` 給 App
-3. App 播放通知音，顯示聊天畫面
-4. 訪客與 Claude API 扮演的角色（小暖）聊天，對話自動結合互動紀錄
-5. 對話 15 輪後漸進收尾道別，App 自動重置等待下一位訪客
-
-需設定環境變數 `ANTHROPIC_API_KEY` 啟用 LLM 聊天功能。
+連線 `ws://localhost:3000/ws` 可即時接收事件與控制裝置。
 
 ## 新增裝置的方式
 

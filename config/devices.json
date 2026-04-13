@@ -8,8 +8,7 @@
         "port": 8001,
         "pluginName": "ExhibitionServer",
         "pluginDeveloper": "Exhibition",
-        "tokenPath": "./config/vts_token.txt",
-        "zoomOnExpression": false
+        "tokenPath": "./config/vts_token.txt"
       }
     },
     {
@@ -50,26 +49,19 @@
       "type": "YoloDetectorDevice",
       "config": {
         "projectPath": "./yolo",
-        "pythonPath": "py",
         "env": {
           "YOLO_PROFILE": "y11",
-          "CAMERA_SOURCE": "0",
-          "CHOPSTICKS_MODEL_Y11": "../models/chopsticks.pt",
-          "FOOD_MODEL_Y11": "../models/food.pt",
+          "CAMERA_SOURCE": "1",
+          "CHOPSTICKS_MODEL_Y11": "models/chopsticks.pt",
+          "FOOD_MODEL_Y11": "models/food.pt",
           "BOWL_MODEL_Y11": "",
-          "CAMERA_CROP": "0.05,0.0,0.65,1.0",
-          "DETECT_EVERY_N": "5",
-          "CHOPSTICKS_CONF": "0.08",
-          "CHOPSTICKS_MIN_ASPECT": "2.0",
-          "FOOD_CONF": "0.50",
-          "FOOD_MAX_DET": "6",
-          "LEFT_BOWL_ZONE": "0.05,0.05,0.40,0.40",
-          "RIGHT_BOWL_ZONE": "0.40,0.05,0.75,0.40"
+          "LEFT_BOWL_ZONE": "0.08,0.52,0.42,0.95",
+          "RIGHT_BOWL_ZONE": "0.58,0.52,0.92,0.95"
         },
         "url": "http://localhost:8000",
         "pollIntervalMs": 500,
         "cooldownMs": 3000,
-        "startupTimeoutMs": 30000
+        "startupTimeoutMs": 15000
       }
     }
   ]
