@@ -8,7 +8,7 @@ class OllamaClient {
    * @param {string} model   模型名稱（如 gemma4:e4b）
    * @param {string} baseURL Ollama 服務位址
    */
-  constructor(model = "gemma4:e4b", baseURL = "http://localhost:11434") {
+  constructor(model = "qwen3.5:9b", baseURL = "http://localhost:11434") {
     this.model = model;
     this._client = axios.create({
       baseURL,
@@ -22,7 +22,7 @@ class OllamaClient {
    * 發送對話訊息給本地 LLM
    * @param {string} systemPrompt  系統提示詞
    * @param {Array<{role: string, content: string}>} messages  對話歷史
-   * @param {number} maxTokens  最大回覆 token 數
+   * @param {number} maxTokens  最大回覆 token 數（不含 thinking）
    * @returns {Promise<string>}  助手回覆文字
    */
   async sendMessage(systemPrompt, messages, maxTokens = 300) {
@@ -43,18 +43,8 @@ class OllamaClient {
           temperature: 0.8,
         },
       });
+      const content = (response.data?.message?.content || "").trim();
 
-      let content = response.data?.message?.content || "";
-
-      // Gemma 4 即使 think:false 仍會在 content 中輸出思考過程，
-      // 真正的回覆在 <channel|> 標記之後，需要截取
-      const channelMarker = "<channel|>";
-      const markerIdx = content.lastIndexOf(channelMarker);
-      if (markerIdx !== -1) {
-        content = content.substring(markerIdx + channelMarker.length);
-      }
-
-      content = content.trim();
       if (!content) {
         throw new Error("Ollama 回覆內容為空");
       }

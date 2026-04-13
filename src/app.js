@@ -4,6 +4,7 @@
 //   雲端模式（CLOUD=1）：等待展場 Bridge 連線，透過 WebSocket 遠端代理裝置
 
 const express = require("express");
+const fs = require("fs");
 const path = require("path");
 const http = require("http");
 const { WebSocketServer } = require("ws");
@@ -30,7 +31,8 @@ async function main() {
   const deviceManager = new DeviceManager(eventBus);
   const sceneManager = new SceneManager(eventBus, deviceManager);
   const visitorSession = new VisitorSession(eventBus);
-  const claudeClient = new OllamaClient("gemma4:e4b");
+  const chatConfig = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../config/chat.json"), "utf-8"));
+  const claudeClient = new OllamaClient(chatConfig.llm.model);
   const chatManager = new ChatManager(eventBus, visitorSession, claudeClient);
   let bridgeManager = null;
 

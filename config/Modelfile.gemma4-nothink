@@ -1,0 +1,15 @@
+FROM gemma4:e4b
+TEMPLATE """{{- range .Messages }}
+{{- if eq .Role "system" }}<start_of_turn>system
+{{ .Content }}<end_of_turn>
+{{- else if eq .Role "user" }}
+<start_of_turn>user
+{{ .Content }}<end_of_turn>
+{{- else if eq .Role "assistant" }}
+<start_of_turn>model
+{{ .Content }}<end_of_turn>
+{{- end }}
+{{- end }}
+<start_of_turn>model
+"""
+PARAMETER temperature 0.8

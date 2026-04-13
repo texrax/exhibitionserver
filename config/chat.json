@@ -10,7 +10,7 @@
     "maxResponseLength": 70
   },
   "llm": {
-    "model": "gemma4:e4b",
+    "model": "qwen3.5:9b",
     "maxTokens": 150
   }
 }
