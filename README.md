@@ -53,13 +53,25 @@ public/
 
 ### 安裝
 
+**macOS：**
 ```bash
-# 安裝 Ollama
 brew install ollama
 brew services start ollama
+```
 
-# 拉取模型
+**Windows：**
+1. 從 [ollama.com](https://ollama.com/download) 下載 Windows 安裝檔並執行
+2. 安裝完成後 Ollama 會自動以背景服務運行（`localhost:11434`）
+
+**拉取模型（兩個平台都一樣）：**
+```bash
 ollama pull gemma4:e4b
+```
+
+**驗證安裝：**
+```bash
+ollama list                    # 確認 gemma4:e4b 已下載
+ollama run gemma4:e4b "你好"   # 測試模型能否正常回應
 ```
 
 ### 切換 LLM

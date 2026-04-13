@@ -1,10 +1,13 @@
 {
   "start": {
-    "description": "展間開始 — 情境一變色燈亮白燈",
+    "description": "展間開始 — 播影片 → 切 VTuber → 啟動餐桌偵測",
     "actions": [
       { "device": "spotlight_1", "action": "setTemp", "params": { "temp": 4000, "brightness": 100 } },
       { "device": "obs", "action": "switchScene", "params": { "sceneName": "Video" } },
-      { "device": "obs", "action": "triggerMediaInput", "params": { "inputName": "Media", "mediaAction": "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_RESTART" } }
+      { "device": "obs", "action": "triggerMediaInput", "params": { "inputName": "Media", "mediaAction": "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_RESTART" } },
+      { "waitForEvent": "obs:mediaEnded", "timeout": 300000, "condition": { "inputName": "Media" } },
+      { "device": "obs", "action": "switchScene", "params": { "sceneName": "VTuber" } },
+      { "device": "yolo_detector", "action": "start", "params": {} }
     ]
   },
 
