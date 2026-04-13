@@ -7,10 +7,10 @@
   "limits": {
     "maxTurns": 15,
     "wrapUpStartTurn": 10,
-    "maxResponseLength": 150
+    "maxResponseLength": 70
   },
   "llm": {
     "model": "gemma4:e4b",
-    "maxTokens": 300
+    "maxTokens": 150
   }
 }

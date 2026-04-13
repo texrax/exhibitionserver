@@ -284,6 +284,8 @@ class ChatManager {
     prompt += `- 語氣像在 LINE 上跟朋友聊天，自然口語化\n`;
     prompt += `- 對話要自然地結合剛才的互動經歷\n`;
     prompt += `- 不要用 emoji 表情符號\n`;
+    prompt += `- 不要加括弧動作描述，例如（停頓一下）、（看著對方）\n`;
+    prompt += `- 少用刪節號「...」，偶爾用一次就好\n`;
 
     // 輪次控制 — 漸進式自然收尾
     const { maxTurns } = limits;
