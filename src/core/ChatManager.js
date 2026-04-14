@@ -27,9 +27,13 @@ class ChatManager {
     this._turnCount = 0;
     this._chatActive = false;
 
-    // 監聽互動完成事件
+    // 預先生成的開場白快取（避免 app 進入聊天後還要等 LLM 跑）
+    this._pregeneratedGreeting = null;
+    this._greetingPromise = null;
+
+    // 監聽互動完成事件 — 先背景生成開場白，再通知 app
     this.eventBus.on("visitor:ready_to_chat", () => {
-      this._notifyAppInteractionsComplete();
+      this._pregenerateGreetingThenNotify();
     });
 
     console.log(`[ChatManager] 初始化完成，角色: ${this.config.character.name}`);
@@ -55,9 +59,13 @@ class ChatManager {
       payload: { sessionState: this.visitorSession.state },
     });
 
-    // 如果互動已經完成，立即通知
+    // 如果互動已經完成：開場白已備好就直接通知；還沒生成就先啟動背景生成
     if (this.visitorSession.state === "ready_to_chat") {
-      this._notifyAppInteractionsComplete();
+      if (this._pregeneratedGreeting) {
+        this._notifyAppInteractionsComplete();
+      } else {
+        this._pregenerateGreetingThenNotify();
+      }
     }
 
     // 處理來自 App 的訊息
@@ -123,19 +131,30 @@ class ChatManager {
     this._turnCount = 0;
     this.visitorSession.startChatting();
 
-    const systemPrompt = this._buildSystemPrompt();
-
     try {
-      // 讓 Claude 產生開場白
-      const greeting = await this.claudeClient.sendMessage(
-        systemPrompt,
-        [{ role: "user", content: "[系統：訪客拿起了手機，請用一句話自然地延續剛才的互動氛圍，像是隨口聊聊剛才的體驗，例如「剛剛那頓飯真不錯」之類的語氣]" }],
-        this.config.llm.maxTokens
-      );
+      let greeting;
+      let greetingUserMsg;
+
+      // 優先使用預生成好的開場白（互動完成時就背景生成了）
+      if (this._pregeneratedGreeting) {
+        greeting = this._pregeneratedGreeting.greeting;
+        greetingUserMsg = this._pregeneratedGreeting.greetingUserMsg;
+        this._pregeneratedGreeting = null;
+        console.log("[ChatManager] 使用預生成的開場白");
+      } else {
+        // 沒有預生成（預生成失敗或還在進行中）— 即時生成
+        this._send({ type: "chat_typing", payload: { typing: true } });
+        greetingUserMsg = "[系統：訪客拿起了手機，請用一句話自然地延續剛才的互動氛圍，像是隨口聊聊剛才的體驗，例如「剛剛那頓飯真不錯」之類的語氣]";
+        greeting = await this.claudeClient.sendMessage(
+          this._buildSystemPrompt(),
+          [{ role: "user", content: greetingUserMsg }],
+          this.config.llm.maxTokens
+        );
+      }
 
       this._turnCount++;
       // 把開場白記錄到對話歷史（但用 assistant 角色）
-      this._messages.push({ role: "user", content: "[系統：訪客拿起了手機，請用一句話自然地延續剛才的互動氛圍，像是隨口聊聊剛才的體驗，例如「剛剛那頓飯真不錯」之類的語氣]" });
+      this._messages.push({ role: "user", content: greetingUserMsg });
       this._messages.push({ role: "assistant", content: greeting });
 
       this._send({
@@ -151,6 +170,7 @@ class ChatManager {
       console.log(`[ChatManager] 開場白已發送 (turn ${this._turnCount})`);
     } catch (err) {
       console.error("[ChatManager] 產生開場白失敗:", err.message);
+      this._send({ type: "chat_typing", payload: { typing: false } });
       this._send({ type: "chat_error", payload: { message: `開場白產生失敗: ${err.message}` } });
       this._chatActive = false;
     }
@@ -177,6 +197,9 @@ class ChatManager {
     this._messages.push({ role: "user", content });
 
     const systemPrompt = this._buildSystemPrompt();
+
+    // 立即通知 App 蘇菲正在輸入，讓前端顯示 typing 指示
+    this._send({ type: "chat_typing", payload: { typing: true } });
 
     try {
       const reply = await this.claudeClient.sendMessage(
@@ -208,6 +231,7 @@ class ChatManager {
       }
     } catch (err) {
       console.error("[ChatManager] Claude 回覆失敗:", err.message);
+      this._send({ type: "chat_typing", payload: { typing: false } });
       this._send({ type: "chat_error", payload: { message: `回覆失敗: ${err.message}` } });
     }
   }
@@ -230,6 +254,7 @@ class ChatManager {
     setTimeout(() => {
       this._messages = [];
       this._turnCount = 0;
+      this._pregeneratedGreeting = null;
       this.visitorSession.reset();
       this._send({ type: "session_reset", payload: {} });
     }, 5000);
@@ -245,6 +270,9 @@ class ChatManager {
     // 基礎角色設定
     let prompt = `你是「${character.name}」。${character.backstory}\n\n`;
     prompt += `你的個性：${character.personality}\n\n`;
+    if (character.culture) {
+      prompt += `## 文化與宗教背景（必須嚴格遵守）\n${character.culture}\n\n`;
+    }
 
     // 注入互動上下文
     prompt += `## 剛才的互動紀錄\n`;
@@ -286,6 +314,7 @@ class ChatManager {
     prompt += `- 不要用 emoji 表情符號\n`;
     prompt += `- 不要加括弧動作描述，例如（停頓一下）、（看著對方）\n`;
     prompt += `- 少用刪節號「...」，偶爾用一次就好\n`;
+    prompt += `- 遇到違反你宗教或文化的請求（如吃豬肉、喝酒），要用角色身份委婉拒絕並簡單解釋\n`;
 
     // 輪次控制 — 漸進式自然收尾
     const { maxTurns } = limits;
@@ -322,6 +351,37 @@ class ChatManager {
   }
 
   /**
+   * 背景預先生成開場白，生成完畢後才通知 App 互動完成
+   * 這樣 App 收到通知（以及鎖定畫面推播）時，第一則訊息已經備好可立即送出
+   */
+  _pregenerateGreetingThenNotify() {
+    // 已經在生成中就不要重複啟動
+    if (this._greetingPromise) {
+      return;
+    }
+
+    console.log("[ChatManager] 開始預生成開場白...");
+    const systemPrompt = this._buildSystemPrompt();
+    const greetingUserMsg = "[系統：訪客拿起了手機，請用一句話自然地延續剛才的互動氛圍，像是隨口聊聊剛才的體驗，例如「剛剛那頓飯真不錯」之類的語氣]";
+
+    this._greetingPromise = this.claudeClient
+      .sendMessage(systemPrompt, [{ role: "user", content: greetingUserMsg }], this.config.llm.maxTokens)
+      .then((greeting) => {
+        this._pregeneratedGreeting = { greeting, greetingUserMsg };
+        console.log("[ChatManager] 開場白預生成完成，通知 App");
+        this._notifyAppInteractionsComplete();
+      })
+      .catch((err) => {
+        console.error("[ChatManager] 預生成開場白失敗:", err.message);
+        // 失敗時仍通知 App，避免前端卡死；_startChat 再嘗試一次即時生成
+        this._notifyAppInteractionsComplete();
+      })
+      .finally(() => {
+        this._greetingPromise = null;
+      });
+  }
+
+  /**
    * 發送訊息到 App
    */
   _send(msg) {
@@ -350,6 +410,7 @@ class ChatManager {
     this._chatActive = false;
     this._messages = [];
     this._turnCount = 0;
+    this._pregeneratedGreeting = null;
     this.visitorSession.reset();
     this._send({ type: "session_reset", payload: {} });
     console.log("[ChatManager] 🔄 聊天已強制重置");
