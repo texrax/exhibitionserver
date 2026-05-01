@@ -342,12 +342,23 @@ class ChatManager {
       return;
     }
 
+    // 把預生成好的開場白一起帶給 App，讓鎖定畫面推播能直接顯示訊息內容
+    const payload = {
+      summary: this.visitorSession.getInteractionSummary(),
+    };
+    if (this._pregeneratedGreeting) {
+      payload.firstMessage = {
+        role: "assistant",
+        content: this._pregeneratedGreeting.greeting,
+      };
+    }
+
     this._send({
       type: "interactions_complete",
-      payload: { summary: this.visitorSession.getInteractionSummary() },
+      payload,
     });
 
-    console.log("[ChatManager] 已通知 App 互動完成");
+    console.log("[ChatManager] 已通知 App 互動完成", payload.firstMessage ? "(含開場白)" : "(無開場白)");
   }
 
   /**
