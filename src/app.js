@@ -143,10 +143,10 @@ async function main() {
     res.json(agentController.getStatus());
   });
 
-  // Demo endpoints — 受 AGENT_DEMO=1 保護，不在 production 啟用
+  // Demo endpoints — 本地模式自動啟用，cloud 模式自動禁用避免 production backdoor
   // 用途：手動觸發 agent 行為，方便不走完三步驟就能展示
-  if (process.env.AGENT_DEMO === "1") {
-    console.log("[Init] AGENT_DEMO=1 — demo endpoints 啟用");
+  if (!IS_CLOUD) {
+    console.log("[Init] Agent demo endpoints 啟用（本地模式）");
     app.post("/api/agent/_demo/force-active", (req, res) => {
       eventBus.publish("visitor:ready_to_chat", { _demo: true });
       res.json({ ok: true, mode: "active", note: "agent 進 active 模式，mock audio 會開始發 speech" });

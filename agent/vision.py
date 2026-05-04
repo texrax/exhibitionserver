@@ -5,9 +5,9 @@
   publish('gaze', { x: 0..1, y: 0..1, distance?: number })
   publish('gesture', { type: 'wave' | 'approach' | ... })
 
-模式：
-  AGENT_REAL=1 + C230_RTSP_URL → 真實模式（cv2 + mediapipe pose）  ← TODO 硬體到位後實作
-  其他                          → mock 模式（每 5s 發左右搖擺的假 gaze）
+判斷模式：
+  有設 C230_RTSP_URL → real 模式（cv2 + mediapipe pose）  ← TODO 硬體到位後實作
+  沒設                → mock 模式（每 5s 發左右搖擺的假 gaze）
 """
 
 import asyncio
@@ -18,12 +18,11 @@ import os
 class VisionModule:
     def __init__(self, server) -> None:
         self.server = server
-        self.use_real = os.environ.get("AGENT_REAL", "0") == "1"
         self.rtsp_url = os.environ.get("C230_RTSP_URL")
         self.fps = float(os.environ.get("VISION_FPS", "5"))
 
     async def start(self) -> None:
-        if self.use_real and self.rtsp_url:
+        if self.rtsp_url:
             print(f"[vision] real mode — RTSP: {self.rtsp_url}")
             try:
                 await self._real_loop()
