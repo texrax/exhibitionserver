@@ -12,6 +12,7 @@
       { "device": "obs", "action": "triggerMediaInput", "params": { "inputName": "Media", "mediaAction": "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_RESTART" } },
       { "waitForEvent": "obs:mediaEnded", "timeout": 300000 },
       { "device": "obs", "action": "switchScene", "params": { "sceneName": "VTuber" } },
+      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "揮手" } },
       { "device": "bulb_1", "action": "setTemp", "params": { "temp": 4000, "brightness": 100 } }
     ]
   },
@@ -172,7 +173,7 @@
     "actions": [
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "block_wave" } },
       { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃飯手開關" } },
-      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃青菜" } },
+      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "說話:好吃" } },
       { "delay": 5000 },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } }
     ]
@@ -184,7 +185,7 @@
     "actions": [
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "block_wave" } },
       { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃飯手開關" } },
-      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃完子" } },
+      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "說話:好吃" } },
       { "delay": 5000 },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } }
     ]
@@ -196,7 +197,7 @@
       { "device": "bulb_2", "action": "setColor", "params": { "r": 255, "g": 0, "b": 0, "brightness": 100 } },
       { "device": "spotlight_2", "action": "setColor", "params": { "r": 255, "g": 0, "b": 0, "brightness": 100 } },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "blink" } },
-      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "不吃" } },
+      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "說話:不要吃" } },
       { "delay": 5000 },
       { "device": "bulb_2", "action": "setTemp", "params": { "temp": 4000, "brightness": 100 } },
       { "device": "spotlight_2", "action": "setTemp", "params": { "temp": 4000, "brightness": 100 } },
@@ -210,6 +211,8 @@
       { "device": "yolo_detector", "action": "stop", "params": {} },
       { "device": "esp32_main", "action": "off", "params": {} },
       { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } },
+      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "揮手" } },
+      { "delay": 1500 },
       { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "待機" } },
       { "device": "spotlight_1", "action": "off", "params": {} },
       { "device": "spotlight_2", "action": "off", "params": {} },

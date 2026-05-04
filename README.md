@@ -266,24 +266,29 @@ Dashboard 右側面板提供完整控制：開/關、亮度滑桿、RGB 色彩�
 
 ## VTube Studio 熱鍵映射
 
-目前模型使用以下 VTS 熱鍵：
+目前模型 (蘇菲 Live2D Ver6) 使用以下 VTS 熱鍵：
 
-| 熱鍵 | 名稱 | 功能 |
+| 名稱 | 類型 | 功能 |
 |------|------|------|
-| N1 | 驚訝 | 表情 |
-| N2 | 生氣 | 表情 |
-| N3 | 哀傷 | 表情 |
-| N4 | 開心(睜眼) | 表情 |
-| N5 | 開心(閉眼) | 表情 |
-| N6 | 更換衣服 | 表情 toggle |
-| N7 | 吃飯手開關 | 表情 toggle |
-| N8 | 播放動畫(吃青菜) | 動畫 |
-| N9 | 播放動畫(吃丸子) | 動畫 |
-| N0 | 播放動畫(不吃) | 動畫 |
-| F1 | 播放動畫(待機) | 動畫 |
-| F2 | 移除表情 | 工具 |
-| F3 | 回歸原點 | 工具 |
-| F4 | 模型重新加載 | 工具 |
+| 驚訝 | 表情 | 驚訝表情 |
+| 生氣 | 表情 | 生氣表情 |
+| 哀傷 | 表情 | 哀傷表情（劇情第三階段使用） |
+| 開心(睜眼) | 表情 | 開心睜眼（星期三正解） |
+| 開心(閉眼) | 表情 | 開心閉眼 |
+| 更換衣服 | 表情 toggle | 進餐桌互動時換裝 |
+| 吃飯手開關 | 表情 toggle | 切換手是否拿碗筷 |
+| 吃青菜 | 動畫 | 吃青菜（無說話） |
+| 吃完子 | 動畫 | 吃丸子（無說話） |
+| 不吃 | 動畫 | 拒絕進食（無說話） |
+| **說話:好吃** | 動畫 | **Ver6 新增**：吃時嘴巴會動的「好吃」反應，用於 yolo_deliver_* |
+| **說話:不要吃** | 動畫 | **Ver6 新增**：拒絕時嘴巴會動，用於 yolo_reject |
+| **揮手** | 動畫 | **Ver6 新增**：開場/結束揮手，用於 start 與 end_interaction |
+| 待機 | 動畫 | 角色待機（注意：Ver6 已對映到「不吃_嘴巴講話」motion，待確認是否為作者預期） |
+| **待機動畫變無** | 工具 | **Ver6 新增**：關閉內建呼吸待機（避免動作打架） |
+| **復原待機動畫** | 工具 | **Ver6 新增**：還原呼吸待機 |
+| 移除表情 | 工具 | 清除所有活躍表情 |
+| 回歸原點 | 工具 | 模型回到原始位置與大小 |
+| 模型重新加載 | 工具 | 重新載入模型檔 |
 
 ### 表情鏡頭控制
 
@@ -512,7 +517,66 @@ curl -X POST http://localhost:3000/api/scenes/play_day_3/trigger
 # 若 LLM 嘗試 express_emotion 會被 publish agent:action_rejected
 ```
 
-要驗證**第四階段對話迴圈**，需走完三步驟讓 `visitor:ready_to_chat` 觸發 → agent 進 active → mock audio 發「你好」→ Claude tool use → say + look_at_visitor。這需要 ESP32 觸控與 YOLO 偵測配合（或用 Dashboard 手動觸發場景）。
+要驗證**第四階段對話迴圈**，需走完三步驟讓 `visitor:ready_to_chat` 觸發 → agent 進 active → mock audio 發「你好」→ Claude tool use → say + look_at_visitor。這需要 ESP32 觸控與 YOLO 偵測配合，或用下面的展示模式手動觸發。
+
+### 展示模式（AGENT_DEMO）
+
+不走完三步驟也能即時驗證 agent 行為，**僅用於本機 demo / 開發**，受環境變數保護：
+
+```bash
+AGENT_DEMO=1 npm start
+```
+
+啟動會看到 `[Init] AGENT_DEMO=1 — demo endpoints 啟用`。多出四個端點：
+
+| Endpoint | 作用 | 對應內部事件 |
+|----------|------|--------------|
+| `POST /api/agent/_demo/force-active` | agent 進 active（啟用 STT、開放 LLM 對話） | publish `visitor:ready_to_chat` |
+| `POST /api/agent/_demo/force-passive` | agent 回 passive（停 STT、清歷史） | publish `visitor:session_reset` |
+| `POST /api/agent/_demo/inject-speech` body=`{text, confidence?}` | 注入訪客語音 → 觸發 LLM tool use | publish `agent:speech` |
+| `POST /api/agent/_demo/inject-gaze` body=`{x:0..1, y:0..1}` | 注入頭部位置 → 觸發 setLookAt | publish `agent:gaze` |
+
+**完整展示腳本（5 分鐘）**：
+
+```bash
+# 前置：開 VTube Studio，載入「蘇菲 Live2D Ver6」模型，設定 → Allow Plugin API access
+# 確保 ANTHROPIC_API_KEY 已設（用真實 key，否則 LLM call 會 401）
+
+# 終端 A — Python agent (mock 模式)
+PYTHONUNBUFFERED=1 ./agent/venv/bin/python agent/server.py
+
+# 終端 B — Node 中控 (demo 模式)
+AGENT_DEMO=1 npm start
+
+# 開瀏覽器 http://localhost:3000，看右上 agent badge
+
+# 終端 C — demo 控制
+# Demo 1：眼神追隨（VTuber 應跟著 mock gaze 左右搖擺）
+curl http://localhost:3000/api/agent/status
+
+# Demo 2：場景鎖（lock 切 restricted → free，agent 仍可 setLookAt）
+curl -X POST http://localhost:3000/api/scenes/play_day_3/trigger
+
+# Demo 3：AI 對話完整迴圈
+curl -X POST http://localhost:3000/api/agent/_demo/force-active
+sleep 1
+curl -X POST http://localhost:3000/api/agent/_demo/inject-speech \
+  -H "Content-Type: application/json" \
+  -d '{"text":"你好啊，剛才那頓飯好吃嗎？"}'
+
+# 觀察：
+#  Dashboard log panel 連續看到
+#    agent:speech_accepted → agent:llm_turn → agent:say → agent:action_executed
+#  VTuber 螢幕應該：
+#    1. 眼神看向 LLM 決定的方向 (look_at_visitor)
+#    2. 切換到對應表情 (express_emotion)
+#    3. 字幕欄顯示 say 的文字（須訂閱 agent:say 事件，OBS 字幕整合在 Phase 8）
+
+# 復位
+curl -X POST http://localhost:3000/api/agent/_demo/force-passive
+```
+
+> ⚠️ `AGENT_DEMO=1` 不要在 production 啟用 — `inject-speech` 端點允許未驗證的客戶端強制 agent 對 Claude 說任意話，等於成本與行為的 backdoor。展場部署請拿掉這個環境變數。
 
 
 ## YoloTD 視覺辨識整合
@@ -523,11 +587,13 @@ curl -X POST http://localhost:3000/api/scenes/play_day_3/trigger
 
 `YoloDetectorDevice` 每 500ms 輪詢 YoloTD 伺服器的 `GET /status` 端點，追蹤 `dining_events` 中的事件狀態。當偵測到 `deliver`（食物成功送達碗裡）事件時，發射 EventBus 事件觸發對應場景：
 
-| 食物 | 觸發場景 | VTuber 動作 |
+| 食物 | 觸發場景 | VTuber 動作 (Ver6) |
 |------|---------|------------|
-| vegetables（青菜） | `yolo_deliver_vegetable` | 吃飯手開關 + 吃青菜 |
-| pork（豬肉） | `yolo_deliver_pork` | 吃飯手開關 + 吃丸子 |
-| beef（牛肉） | `yolo_deliver_beef` | 吃飯手開關 + 吃丸子 |
+| vegetables（青菜） | `yolo_deliver_vegetable` | 吃飯手開關 + 說話:好吃 |
+| beef（牛肉） | `yolo_deliver_beef` | 吃飯手開關 + 說話:好吃 |
+| 拒絕 | `yolo_reject` | 說話:不要吃 |
+
+> **Ver6 變更**：原本觸發無說話版的 `吃青菜` / `吃完子` / `不吃`，已替換為說話版 (`說話:好吃` / `說話:不要吃`)，搭配未來補上的「好吃」「不要吃」音檔可達成嘴巴對嘴形效果。
 
 ### 啟動方式
 

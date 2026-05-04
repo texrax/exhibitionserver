@@ -143,6 +143,38 @@ async function main() {
     res.json(agentController.getStatus());
   });
 
+  // Demo endpoints — 受 AGENT_DEMO=1 保護，不在 production 啟用
+  // 用途：手動觸發 agent 行為，方便不走完三步驟就能展示
+  if (process.env.AGENT_DEMO === "1") {
+    console.log("[Init] AGENT_DEMO=1 — demo endpoints 啟用");
+    app.post("/api/agent/_demo/force-active", (req, res) => {
+      eventBus.publish("visitor:ready_to_chat", { _demo: true });
+      res.json({ ok: true, mode: "active", note: "agent 進 active 模式，mock audio 會開始發 speech" });
+    });
+    app.post("/api/agent/_demo/force-passive", (req, res) => {
+      eventBus.publish("visitor:session_reset", { _demo: true });
+      res.json({ ok: true, mode: "passive", note: "agent 回 passive，history 清空" });
+    });
+    app.post("/api/agent/_demo/inject-speech", (req, res) => {
+      const text = req.body?.text;
+      if (!text || typeof text !== "string") {
+        return res.status(400).json({ error: "body 需要 { text: string }" });
+      }
+      const confidence = req.body?.confidence ?? 0.95;
+      eventBus.publish("agent:speech", { text, confidence, _demo: true });
+      res.json({ ok: true, injected: { text, confidence } });
+    });
+    app.post("/api/agent/_demo/inject-gaze", (req, res) => {
+      const x = Number(req.body?.x);
+      const y = Number(req.body?.y);
+      if (!Number.isFinite(x) || !Number.isFinite(y)) {
+        return res.status(400).json({ error: "body 需要 { x: 0..1, y: 0..1 }" });
+      }
+      eventBus.publish("agent:gaze", { x, y, _demo: true });
+      res.json({ ok: true, injected: { x, y } });
+    });
+  }
+
   
   // Bridge 狀態端點（雲端模式）
   if (IS_CLOUD) {
