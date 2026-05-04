@@ -9,6 +9,10 @@
 
 const ALLOWED_VTS_ACTIONS_RESTRICTED = new Set(["setLookAt", "clearLookAt"]);
 
+// scene 執行中允許的 hotkey 名單（白名單內的 triggerHotkey 才放行）
+// 揮手是迎賓動作不會干擾 scene 內部邏輯，所以開放
+const ALLOWED_HOTKEYS_RESTRICTED = new Set(["揮手"]);
+
 const MODE = {
   PASSIVE: "passive",
   ACTIVE: "active",
@@ -96,6 +100,8 @@ class AgentController {
     this.agentDeviceId = config.agentDeviceId || "ai_agent";
     this._gazeMinIntervalMs = config.gazeMinIntervalMs || 200;
     this._speechMinConfidence = config.speechMinConfidence ?? 0.6;
+    this._waveCooldownMs = config.waveCooldownMs || 5000;
+    this._lastWaveAt = 0;
     this._maxTokens = config.llm?.maxTokens || 400;
     this._temperature = config.llm?.temperature ?? 0.8;
 
@@ -177,6 +183,32 @@ class AgentController {
 
   _onGesture(data) {
     this._lastGesture = { ...data, _at: Date.now() };
+
+    // wave gesture → 朝訪客方向 setLookAt + 觸發「揮手」hotkey（reflex，不走 LLM）
+    if (data?.type === "wave") {
+      const now = Date.now();
+      if (this._lastWaveAt && now - this._lastWaveAt < this._waveCooldownMs) {
+        return; // cooldown 內忽略，避免訪客連續揮手導致 VTuber 抽搐
+      }
+      this._lastWaveAt = now;
+
+      // 把訪客手部位置（如果 vision 有給）映射到 setLookAt
+      if (typeof data.x === "number" && typeof data.y === "number") {
+        const lookX = (data.x - 0.5) * 60;
+        const lookY = (0.5 - data.y) * 60;
+        this.executeAgentAction({
+          device: "vtubestudio",
+          action: "setLookAt",
+          params: { x: lookX, y: lookY, headTilt: 0 },
+        }).catch(() => {});
+      }
+
+      this.executeAgentAction({
+        device: "vtubestudio",
+        action: "triggerHotkey",
+        params: { name: "揮手" },
+      }).catch(() => {});
+    }
   }
 
   async _onSpeech({ text, confidence } = {}) {
@@ -356,9 +388,12 @@ class AgentController {
 
   async executeAgentAction({ device, action, params = {} }) {
     if (this._vtsLockMode === "restricted" && device === "vtubestudio") {
-      if (!ALLOWED_VTS_ACTIONS_RESTRICTED.has(action)) {
+      const allowed =
+        ALLOWED_VTS_ACTIONS_RESTRICTED.has(action) ||
+        (action === "triggerHotkey" && ALLOWED_HOTKEYS_RESTRICTED.has(params?.name));
+      if (!allowed) {
         const reason = "scene_lock_restricted";
-        console.log(`[AgentController] 拒絕動作 (lock=restricted): ${device}.${action}`);
+        console.log(`[AgentController] 拒絕動作 (lock=restricted): ${device}.${action} ${params?.name || ""}`);
         this.eventBus.publish("agent:action_rejected", { device, action, params, reason });
         return { rejected: true, reason };
       }
@@ -389,4 +424,5 @@ class AgentController {
 module.exports = AgentController;
 module.exports.MODE = MODE;
 module.exports.ALLOWED_VTS_ACTIONS_RESTRICTED = ALLOWED_VTS_ACTIONS_RESTRICTED;
+module.exports.ALLOWED_HOTKEYS_RESTRICTED = ALLOWED_HOTKEYS_RESTRICTED;
 module.exports.TOOL_SCHEMAS = TOOL_SCHEMAS;

@@ -307,6 +307,50 @@ function makeController(extra = {}) {
     assert(dm.callsOf("removeAllExpressions").length === 1, "neutral → removeAllExpressions");
   });
 
+  await describe("18. wave gesture → 觸發 setLookAt + triggerHotkey('揮手')", async () => {
+    const { eb, dm } = makeController();
+    eb.publish("agent:gesture", { type: "wave", x: 0.6, y: 0.3 });
+    await sleep(30);
+    assert(dm.callsOf("setLookAt").length === 1, "setLookAt 被觸發（朝揮手位置）");
+    const hkCalls = dm.callsOf("triggerHotkey");
+    assert(hkCalls.length === 1 && hkCalls[0].params.name === "揮手", "triggerHotkey('揮手') 被觸發");
+  });
+
+  await describe("19. wave cooldown 內第二次揮手被忽略", async () => {
+    const { eb, dm } = makeController({ config: { waveCooldownMs: 1000 } });
+    eb.publish("agent:gesture", { type: "wave", x: 0.5, y: 0.3 });
+    eb.publish("agent:gesture", { type: "wave", x: 0.5, y: 0.3 });
+    await sleep(30);
+    assert(dm.callsOf("triggerHotkey").length === 1, `cooldown 內第二次被忽略 (got ${dm.callsOf("triggerHotkey").length})`);
+  });
+
+  await describe("20. 白名單例外：scene 執行中「揮手」hotkey 仍可觸發", async () => {
+    const { eb, dm } = makeController();
+    eb.publish("scene:vts_lock_changed", { mode: "restricted" });
+    await sleep(5);
+    eb.publish("agent:gesture", { type: "wave", x: 0.5, y: 0.3 });
+    await sleep(30);
+    const hkCalls = dm.callsOf("triggerHotkey");
+    assert(hkCalls.length === 1 && hkCalls[0].params.name === "揮手", "scene 期間揮手仍通過白名單");
+  });
+
+  await describe("21. 白名單嚴格：scene 執行中其他 hotkey 仍被擋", async () => {
+    const { eb, dm } = makeController();
+    eb.publish("scene:vts_lock_changed", { mode: "restricted" });
+    await sleep(5);
+    const r = await dm; // placeholder
+    // 直接呼叫 executeAgentAction
+    const { c } = makeController({ initialLockMode: "restricted" });
+    eb.publish("scene:vts_lock_changed", { mode: "restricted" });
+    await sleep(5);
+    const result = await c.executeAgentAction({
+      device: "vtubestudio",
+      action: "triggerHotkey",
+      params: { name: "驚訝" },
+    });
+    assert(result.rejected === true, "「驚訝」hotkey 仍被白名單擋");
+  });
+
   await describe("17. tool dispatch 對未知 tool 回 error 不 crash", async () => {
     const mockLlm = {
       runTurn: async () => ({

@@ -400,6 +400,18 @@ active 模式下訪客講話 → 呼叫 Claude，三個工具：
 
 歷史超過 12 輪自動裁切，`visitor:session_reset` 時清空。Ollama provider 不支援 tool use → 對話迴圈停用，speech 會 publish 成 `agent:speech_dropped`。
 
+### Wave 反射（不走 LLM 的即時反應）
+
+訪客揮手 → VTuber 立刻揮手回應。**不丟 Claude，純 reflex**：訪客期待 < 500ms 視覺回應，走 LLM 端到端 2-3 秒會慢到沒感覺。
+
+| 來源 | 觸發 | 動作 |
+|------|------|------|
+| `agent:gesture { type:"wave", x, y }` | Python `vision.py` 偵測（mediapipe pose: 手腕高於肩 + 1 秒內水平往復 ≥ 2 次） | `setLookAt` 朝揮手方向 + `triggerHotkey("揮手")`，5 秒 cooldown |
+
+**白名單例外**：`triggerHotkey("揮手")` 是唯一在 scene 執行中也允許的 hotkey（迎賓動作不會干擾 scene 內部邏輯）。其他 hotkey（驚訝、生氣等）在 scene 期間仍會被擋下。要新增 hotkey 例外，改 `src/core/AgentController.js` 的 `ALLOWED_HOTKEYS_RESTRICTED`。
+
+mock 模式下 `vision.py` 啟動 20 秒後發第一次假 wave，之後每 30 秒一次，方便驗證 wiring 不需真實鏡頭。
+
 ### Python agent
 
 `agent/server.py` + `vision.py` + `audio.py`，跟 Node 用 `ws://localhost:9000/agent` 互通。**自動依環境變數判斷 mock/real**：
