@@ -19,6 +19,16 @@ class SceneManager {
     this._abortController = null;
     // 可以強制取消其他場景的場景名單
     this._forceScenes = new Set(["start", "all_off", "end_interaction"]);
+    // VTS 控制權鎖：scene 執行中 = 'restricted'，AI agent 只能做白名單微動作（如 setLookAt）
+    this._vtsLockMode = "free";
+  }
+
+  /**
+   * 取得目前 VTS 鎖模式 — 'free' 或 'restricted'
+   * AgentController 用這個判斷能否觸發 hotkey/expression
+   */
+  getVtsLockMode() {
+    return this._vtsLockMode;
   }
 
   /**
@@ -160,8 +170,11 @@ class SceneManager {
     if (isExclusive) {
       this._abortController = abort;
     }
+    // 進入 restricted 模式 — AgentController 訂閱該事件後會自動限制動作白名單
+    this._vtsLockMode = "restricted";
+    this.eventBus.publish("scene:vts_lock_changed", { mode: "restricted", scene: sceneName });
     this.eventBus.publish("scene:started", { scene: sceneName });
-    console.log(`[SceneManager] ▶ 執行場景: ${sceneName}`);
+    console.log(`[SceneManager] ▶ 執行場景: ${sceneName} (VTS 鎖: restricted)`);
 
     const results = [];
 
@@ -210,8 +223,11 @@ class SceneManager {
         }
         this._activeScene = null;
       }
+      // 解鎖前先 publish lock 變更，再 publish finished — AgentController 收到 finished 時鎖已是 free
+      this._vtsLockMode = "free";
+      this.eventBus.publish("scene:vts_lock_changed", { mode: "free", scene: sceneName });
       this.eventBus.publish("scene:finished", { scene: sceneName, results });
-      console.log(`[SceneManager] ■ 場景完成: ${sceneName}`);
+      console.log(`[SceneManager] ■ 場景完成: ${sceneName} (VTS 鎖: free)`);
     }
 
     return { status: "ok", scene: sceneName, results };

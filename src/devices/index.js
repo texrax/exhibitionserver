@@ -9,6 +9,7 @@ const RemoteDevice = require("./RemoteDevice");
 const YoloDetectorDevice = require("./YoloDetectorDevice");
 const WizLightDevice = require("./WizLightDevice");
 const OBSDevice = require("./OBSDevice");
+const AIAgentDevice = require("./AIAgentDevice");
 
 /**
  * 裝置類型名稱 → 類別對應表
@@ -23,4 +24,5 @@ module.exports = {
   YoloDetectorDevice,
   WizLightDevice,
   OBSDevice,
+  AIAgentDevice,
 };

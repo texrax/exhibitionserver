@@ -1,0 +1,12 @@
+# Phase 5 骨架最小依賴 — mock 模式可運作
+websockets>=12.0,<17.0
+
+# === 真實模式才需要（AGENT_REAL=1）— 硬體到位後安裝 ===
+# 視覺：C230 RTSP + 訪客頭部位置
+# opencv-python>=4.10
+# mediapipe>=0.10
+
+# 音訊：USB mic + VAD + STT
+# sounddevice>=0.5
+# webrtcvad>=2.0
+# deepgram-sdk>=3.5

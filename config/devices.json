@@ -64,6 +64,14 @@
         "cooldownMs": 3000,
         "startupTimeoutMs": 15000
       }
+    },
+    {
+      "id": "ai_agent",
+      "type": "AIAgentDevice",
+      "config": {
+        "url": "ws://localhost:9000/agent",
+        "reconnectIntervalMs": 5000
+      }
     }
   ]
 }

@@ -26,6 +26,10 @@ class VTubeStudioDevice extends BaseDevice {
     this._activeExpressions = new Set(); // 追蹤目前啟用的表情檔案名稱
     this._expressionZoomed = false; // 追蹤表情拉近鏡頭狀態
     this.zoomOnExpression = config.zoomOnExpression !== false;
+    // setLookAt：injected parameter 必須每秒至少 resend 一次否則 VTS 視為 lost
+    this._lookAtTarget = null;
+    this._lookAtKeepaliveTimer = null;
+    this._lookAtIntervalMs = config.lookAtIntervalMs || 800;
   }
 
   async init() {
@@ -67,6 +71,10 @@ class VTubeStudioDevice extends BaseDevice {
         return this._createParameter(params);
       case "deleteParameter":
         return this._deleteParameter(params.parameterName);
+      case "setLookAt":
+        return this._setLookAt(params);
+      case "clearLookAt":
+        return this._clearLookAt();
       default:
         throw new Error(`[${this.id}] 不支援的動作: ${action}`);
     }
@@ -88,6 +96,8 @@ class VTubeStudioDevice extends BaseDevice {
       { action: "getTrackingParams", params: {}, description: "取得追蹤參數列表" },
       { action: "createParameter", params: { parameterName: "string", min: "number", max: "number", defaultValue: "number" }, description: "建立自訂參數" },
       { action: "deleteParameter", params: { parameterName: "string" }, description: "刪除自訂參數" },
+      { action: "setLookAt", params: { x: "number(-30..30)", y: "number(-30..30)", headTilt: "number(-10..10)" }, description: "讓角色看向指定方向（眼球+頭部，自動 keepalive）" },
+      { action: "clearLookAt", params: {}, description: "停止 setLookAt 並交回 VTS 預設追蹤" },
     ];
   }
 
@@ -102,6 +112,7 @@ class VTubeStudioDevice extends BaseDevice {
 
   async destroy() {
     if (this._reconnectTimer) clearTimeout(this._reconnectTimer);
+    this._stopLookAtKeepalive();
     if (this._ws) {
       this._ws.close();
       this._ws = null;
@@ -149,6 +160,7 @@ class VTubeStudioDevice extends BaseDevice {
         this._authenticated = false;
         this._activeExpressions.clear();
         this._expressionZoomed = false;
+        this._stopLookAtKeepalive();
         this._setStatus("offline");
         this._rejectAllPending("WebSocket 連線中斷");
         this._scheduleReconnect();
@@ -397,6 +409,58 @@ class VTubeStudioDevice extends BaseDevice {
   async _deleteParameter(parameterName) {
     const result = await this._sendRequest("ParameterDeletionRequest", { parameterName });
     return result.data;
+  }
+
+  // ==================================================
+  //  setLookAt 微動作 — 三步驟期間白名單允許的唯一操作
+  // ==================================================
+
+  async _setLookAt(params = {}) {
+    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+    const x = clamp(Number(params.x) || 0, -30, 30);
+    const y = clamp(Number(params.y) || 0, -30, 30);
+    const tilt = clamp(Number(params.headTilt) || 0, -10, 10);
+
+    const parameterValues = [
+      { id: "FaceAngleX", value: x },
+      { id: "FaceAngleY", value: y },
+      { id: "FaceAngleZ", value: tilt },
+      { id: "EyeRightX", value: x / 30 },
+      { id: "EyeRightY", value: y / 30 },
+      { id: "EyeLeftX", value: x / 30 },
+      { id: "EyeLeftY", value: y / 30 },
+    ];
+
+    this._lookAtTarget = parameterValues;
+    await this._injectParameter(parameterValues, true, "set");
+    this._startLookAtKeepalive();
+
+    this.eventBus.publish(`${this.id}:lookAtChanged`, { x, y, headTilt: tilt });
+    return { x, y, headTilt: tilt };
+  }
+
+  async _clearLookAt() {
+    this._stopLookAtKeepalive();
+    this.eventBus.publish(`${this.id}:lookAtCleared`, {});
+    return { cleared: true };
+  }
+
+  _startLookAtKeepalive() {
+    if (this._lookAtKeepaliveTimer) return;
+    this._lookAtKeepaliveTimer = setInterval(() => {
+      if (!this._authenticated || !this._lookAtTarget || !this._ws || this._ws.readyState !== WebSocket.OPEN) return;
+      this._injectParameter(this._lookAtTarget, true, "set").catch((err) => {
+        console.error(`[${this.id}] LookAt keepalive 失敗: ${err.message}`);
+      });
+    }, this._lookAtIntervalMs);
+  }
+
+  _stopLookAtKeepalive() {
+    if (this._lookAtKeepaliveTimer) {
+      clearInterval(this._lookAtKeepaliveTimer);
+      this._lookAtKeepaliveTimer = null;
+    }
+    this._lookAtTarget = null;
   }
 
   // ==================================================

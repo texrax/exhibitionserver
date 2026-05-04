@@ -1,0 +1,37 @@
+{
+  "agentDeviceId": "ai_agent",
+  "gazeMinIntervalMs": 200,
+  "speechMinConfidence": 0.6,
+
+  "_comment": "三步驟期間 (scene:vts_lock_changed.mode === 'restricted') AgentController 對 vtubestudio 只允許白名單動作。白名單寫死在 src/core/AgentController.js — ALLOWED_VTS_ACTIONS_RESTRICTED",
+
+  "llm": {
+    "_comment": "Phase 6 才會用：Claude tool use 設定。temperature 略高讓回應自然",
+    "temperature": 0.8,
+    "maxTokens": 400,
+    "tools": [
+      "express_emotion",
+      "look_at_visitor",
+      "trigger_scene"
+    ]
+  },
+
+  "python": {
+    "_comment": "Phase 5 Python agent 服務的設定 — Node.js 端不直接讀，只是供文檔用",
+    "port": 9000,
+    "vision": {
+      "rtspEnv": "C230_RTSP_URL",
+      "fps": 5
+    },
+    "audio": {
+      "device": "default",
+      "vadAggressiveness": 2,
+      "minSilenceMs": 800
+    },
+    "stt": {
+      "provider": "deepgram",
+      "model": "nova-2",
+      "language": "zh-TW"
+    }
+  }
+}

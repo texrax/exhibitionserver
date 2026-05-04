@@ -12,6 +12,60 @@
   const sceneContainer = document.getElementById("sceneContainer");
   const logEntries = document.getElementById("logEntries");
   const toast = document.getElementById("toast");
+  const agentBadge = document.getElementById("agentBadge");
+
+  // Agent 狀態（由 /api/agent/status + agent:* 事件即時更新）
+  const agentState = {
+    mode: "passive",
+    vtsLockMode: "free",
+    llmReady: false,
+    lastSay: null,
+    lastSpeech: null,
+  };
+
+  function renderAgentBadge() {
+    if (!agentBadge) return;
+    agentBadge.style.display = "";
+    const dot = agentState.mode === "active" ? "●" : "○";
+    const llm = agentState.llmReady ? "LLM✓" : "LLM✗";
+    agentBadge.textContent = `${dot} agent ${agentState.mode} · ${llm} · lock=${agentState.vtsLockMode}`;
+    agentBadge.classList.toggle("active", agentState.mode === "active");
+    agentBadge.classList.toggle("error", !agentState.llmReady);
+    agentBadge.title = [
+      `mode: ${agentState.mode}`,
+      `vts lock: ${agentState.vtsLockMode}`,
+      `LLM ready: ${agentState.llmReady}`,
+      agentState.lastSay ? `last say: ${agentState.lastSay}` : "",
+      agentState.lastSpeech ? `last speech: ${agentState.lastSpeech}` : "",
+    ].filter(Boolean).join("\n");
+  }
+
+  async function fetchAgentStatus() {
+    try {
+      const r = await fetch("/api/agent/status");
+      if (!r.ok) return;
+      const s = await r.json();
+      agentState.mode = s.mode;
+      agentState.vtsLockMode = s.vtsLockMode;
+      agentState.llmReady = !!s.llmReady;
+      renderAgentBadge();
+    } catch {}
+  }
+
+  function handleAgentEvent(eventName, data) {
+    if (eventName === "agent:mode_changed") {
+      agentState.mode = data.mode;
+    } else if (eventName === "scene:vts_lock_changed") {
+      agentState.vtsLockMode = data.mode;
+    } else if (eventName === "agent:say") {
+      agentState.lastSay = data.text;
+    } else if (eventName === "agent:speech_accepted" || eventName === "agent:speech") {
+      agentState.lastSpeech = data.text;
+    } else {
+      return;
+    }
+    renderAgentBadge();
+  }
 
   // ==================================================
   //  WebSocket 連線
@@ -25,6 +79,7 @@
       connDot.classList.add("connected");
       connText.textContent = "Connected";
       if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+      fetchAgentStatus();
     };
 
     ws.onclose = () => {
@@ -81,6 +136,7 @@
         break;
       case "event":
         appendLog(msg.payload);
+        handleAgentEvent(msg.payload.event, msg.payload.data || {});
         if (msg.payload.event === "bridge:connected") updateBridgeUI(true);
         if (msg.payload.event === "bridge:disconnected") updateBridgeUI(false);
         if (msg.payload.event === "bridge:devicesRegistered") requestStatus();

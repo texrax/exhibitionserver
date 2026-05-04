@@ -47,40 +47,49 @@ public/
   index.html         ← 中控 Dashboard
 ```
 
-## 本地 LLM（Gemma 4 + Ollama）
+## LLM Provider 切換（Claude / Ollama）
 
-展場無外網環境下，使用 Ollama 在本地跑 Gemma 4 模型替代 Claude API。
+ChatManager 支援兩個 LLM provider，由 `config/chat.json` 的 `llm.provider` 欄位決定，可被環境變數 `LLM_PROVIDER` 覆蓋。預設使用 **Claude API**。
 
-### 安裝
+### 設定（`config/chat.json`）
 
-**macOS：**
-```bash
-brew install ollama
-brew services start ollama
+```json
+"llm": {
+  "provider": "claude",
+  "maxTokens": 150,
+  "claude": { "model": "claude-sonnet-4-6" },
+  "ollama": { "model": "qwen3.5:9b", "baseURL": "http://localhost:11434" }
+}
 ```
 
-**Windows：**
-1. 從 [ollama.com](https://ollama.com/download) 下載 Windows 安裝檔並執行
-2. 安裝完成後 Ollama 會自動以背景服務運行（`localhost:11434`）
+### Claude（預設）
 
-**拉取模型（兩個平台都一樣）：**
 ```bash
-ollama pull gemma4:e4b
+export ANTHROPIC_API_KEY=sk-ant-...
+npm start
 ```
 
-**驗證安裝：**
+啟動時若 `provider=claude` 但 `ANTHROPIC_API_KEY` 未設定，伺服器會 **fail-fast 直接報錯**，不會靜默退回 Ollama。
+切換模型只需修改 `chat.json` 的 `claude.model`（如 `claude-haiku-4-5-20251001`）。
+
+### Ollama（展場無外網的離線備援）
+
+切換方式（兩種任選）：
+- 改 `chat.json` 的 `provider: "ollama"`
+- 或啟動時加環境變數：`LLM_PROVIDER=ollama npm start`
+
+需先安裝 Ollama：
+
+**macOS：** `brew install ollama && brew services start ollama`
+**Windows：** 從 [ollama.com](https://ollama.com/download) 下載安裝（背景服務 `localhost:11434`）
+
+**拉取模型：**
 ```bash
-ollama list                    # 確認 gemma4:e4b 已下載
-ollama run gemma4:e4b "你好"   # 測試模型能否正常回應
+ollama pull qwen3.5:9b              # 預設
+ollama list                          # 驗證
 ```
 
-### 切換 LLM
-
-在 `src/app.js` 中切換：
-- **本地 Gemma 4**：`const OllamaClient = require("./core/OllamaClient")` + `new OllamaClient("gemma4:e4b")`
-- **雲端 Claude**：`const ClaudeClient = require("./core/ClaudeClient")` + `new ClaudeClient(process.env.ANTHROPIC_API_KEY)`
-
-模型設定在 `config/chat.json` 的 `llm` 欄位。
+> ⚠️ **注意**：兩個 client 共用 `sendMessage(systemPrompt, messages, maxTokens)` 介面，但 Claude 對中文角色扮演品質明顯較好；Ollama 僅作展場斷網時的緊急備援，**回覆品質下降需事前驗證可接受**。
 
 ## API 端點
 
@@ -300,6 +309,211 @@ Dashboard 右側面板提供完整控制：開/關、亮度滑桿、RGB 色彩�
 ### 動畫自動取消
 
 播放新動畫（名稱以「播放動畫」開頭的熱鍵）時，系統會自動先觸發「取消動作」熱鍵清除上一個動畫。
+
+### setLookAt 微動作（眼神追隨）
+
+`VTubeStudioDevice` 提供 `setLookAt` action 透過 injectParameter 同時控制頭部與雙眼，用於 AI agent 即時追隨訪客位置，**不會影響任何 hotkey/expression 狀態**。
+
+```bash
+curl -X POST http://localhost:3000/api/devices/vtubestudio/execute \
+  -H "Content-Type: application/json" \
+  -d '{"action":"setLookAt","params":{"x":-15,"y":0,"headTilt":3}}'
+```
+
+| 參數 | 範圍 | 說明 |
+|------|------|------|
+| `x` | -30 ~ 30 | 水平角度（負=左、正=右） |
+| `y` | -30 ~ 30 | 垂直角度（負=下、正=上） |
+| `headTilt` | -10 ~ 10 | 頭部側傾 |
+
+呼叫一次後系統自動每 800ms resend 注入參數（VTS 規定 injected param 每秒至少 resend 一次否則被視為 lost）。要停止追隨並交回 VTS 預設追蹤：
+
+```bash
+curl -X POST http://localhost:3000/api/devices/vtubestudio/execute \
+  -d '{"action":"clearLookAt","params":{}}'
+```
+
+可由 `config/devices.json` 的 vtubestudio 設定調整 keepalive 間隔：`"lookAtIntervalMs": 800`
+
+### VTS 控制權鎖（場景保護機制）
+
+為防止未來 AI agent 在三步驟流程（`play_day_X`、`yolo_deliver_X`、`end_interaction`）中干擾既有表情/動畫，SceneManager 維護一個 `_vtsLockMode` 狀態：
+
+| Mode | 觸發時機 | 用途 |
+|------|----------|------|
+| `restricted` | 任何 scene 開始執行時 | AgentController 限制只允許白名單動作（`setLookAt`） |
+| `free` | scene 結束 / 系統閒置 | AgentController 可呼叫任意 VTS action |
+
+事件 `scene:vts_lock_changed` 會在每次切換時 publish：
+
+```js
+eventBus.on('scene:vts_lock_changed', ({ mode, scene }) => {
+  // mode: 'restricted' | 'free'
+});
+```
+
+可用 `sceneManager.getVtsLockMode()` 同步查詢。**此機制是後續 AI agent 功能的基礎，現階段只發出事件不執行強制限制**（限制邏輯由將實作的 `AgentController` 在 agent 端處理）。
+
+> AI agent 即時控制 VTuber **Phase 1-7 骨架已全部完成**（mock 模式可端到端跑通）。真實視訊/音訊 (`AGENT_REAL=1`) 部分標記為 TODO 等硬體到位。詳見下方「AI Agent 即時控制」段落。
+
+## AI Agent 即時控制 (Phase 4 已完成)
+
+新增 `AIAgentDevice` 與 `AgentController` 兩個核心元件，**完全不影響現有三步驟流程**。
+
+### 架構
+
+```
+config/agent.json ─┐
+                   ▼
+         ┌─── AgentController ────┐  ← 訂閱 EventBus
+         │     mode: passive|active │   visitor:ready_to_chat → active
+         │     vtsLockMode 同步     │   visitor:session_reset  → passive
+         │     gaze→setLookAt 節流  │   scene:vts_lock_changed
+         │     白名單檢查           │   agent:speech / gaze / gesture
+         └────────┬──────────────┘
+                  │ executeAgentAction()
+                  ▼
+        DeviceManager → vtubestudio.setLookAt
+                      → 其他裝置（lock=free 時）
+
+         AIAgentDevice (config/devices.json: ai_agent)
+              ↑ WS reconnect 5s
+              │
+         ws://localhost:9000/agent ← (Phase 5) Python agent 服務
+              │ 收到 speech/gesture/gaze → publish agent:* 到 EventBus
+```
+
+### 模式
+
+| Mode | 觸發時機 | STT | VTS 動作權限 |
+|------|----------|-----|--------------|
+| `passive`（預設） | server 啟動 / `visitor:session_reset` | off | 跟隨 `_vtsLockMode`：scene 執行中只能 `setLookAt`，否則無限制 |
+| `active` | `visitor:ready_to_chat` | on | 同上 |
+
+模式切換時 AgentController 會自動對 `ai_agent` 裝置發 `startListening` / `stopListening` 命令（未連線時忽略）。
+
+### 白名單機制
+
+`AgentController.executeAgentAction()` 是 agent 所有裝置動作的唯一入口。當 `_vtsLockMode === 'restricted'` 時，對 `vtubestudio` 只允許 `setLookAt` / `clearLookAt`，其餘動作被拒絕並 publish `agent:action_rejected`。白名單在 `src/core/AgentController.js` 的 `ALLOWED_VTS_ACTIONS_RESTRICTED`。
+
+### 狀態查詢
+
+```bash
+curl http://localhost:3000/api/agent/status
+# {"mode":"passive","vtsLockMode":"free","lastGesture":null,"lastGazeAt":null}
+```
+
+### 設定（`config/agent.json`）
+
+```json
+{
+  "agentDeviceId": "ai_agent",
+  "gazeMinIntervalMs": 200,
+  "speechMinConfidence": 0.6
+}
+```
+
+### Phase 6：Claude tool use 對話迴圈（已完成）
+
+`AgentController._onSpeech` 收到 STT 結果後呼叫 Claude（`@anthropic-ai/sdk`），用 tool use 取得結構化動作。三個工具：
+
+| Tool | 對應 VTS 動作 | 場景鎖中可用？ |
+|------|-------------|---------------|
+| `look_at_visitor({x, y, headTilt?})` | `setLookAt` | ✅（在白名單） |
+| `express_emotion({emotion})` | `setExpression` / `triggerHotkey`（依 `emotionMap`） | ❌ 三步驟期間被拒絕 |
+| `say({text})` | publish `agent:say` 事件（Phase 6 未接 TTS） | ✅ |
+
+`emotionMap` 預設值（可在 `config/agent.json` 覆寫）：
+
+```json
+"emotionMap": {
+  "happy": { "type": "expression", "file": "開心(睜眼).exp3.json" },
+  "sad": { "type": "expression", "file": "哀傷.exp3.json" },
+  "surprised": { "type": "hotkey", "name": "驚訝" },
+  "angry": { "type": "hotkey", "name": "生氣" },
+  "neutral": { "type": "removeAll" }
+}
+```
+
+對話歷史保存在 `AgentController._history`（與 ChatManager APP 文字聊天分開），`visitor:session_reset` 時清空，超過 12 turns 自動裁切。
+
+**Provider 限制**：`ClaudeAgentClient` 僅在 `LLM_PROVIDER=claude` + 設定 `ANTHROPIC_API_KEY` 時建立。Ollama 不支援 tool use，所以 ollama provider 下語音對話迴圈停用（會 publish `agent:speech_dropped { reason: "no_llm_client" }`）。
+
+### 監看事件（除錯用）
+
+```bash
+wscat -c ws://localhost:3000/ws
+# 在 active 模式下訪客講話會看到：
+#   agent:speech, agent:speech_accepted, agent:llm_turn,
+#   agent:say, agent:action_executed (setLookAt / setExpression)
+```
+
+### Phase 5：Python agent 服務（已完成骨架）
+
+`agent/` 目錄下的獨立 Python 服務，與 Node.js 透過 WebSocket 互通：
+
+```
+agent/
+├── server.py        WS server (ws://localhost:9000/agent)
+├── vision.py        視覺：mock 每 5s 發左右搖擺 gaze；real 模式 cv2+mediapipe (TODO)
+├── audio.py         音訊：mock 收到 startListening 後 2s 發「你好」；real 模式 sounddevice+VAD+Deepgram (TODO)
+└── requirements.txt
+```
+
+**啟動 Python agent**（mock 模式，最小依賴）：
+```bash
+cd agent
+python3 -m venv venv
+./venv/bin/pip install -r requirements.txt
+PYTHONUNBUFFERED=1 ./venv/bin/python server.py
+```
+
+啟動後 Node 端 `AIAgentDevice` 會自動連上，看到 log：
+```
+[ai_agent] 已連到 Python agent: ws://localhost:9000/agent
+[EventBus] agent:gaze {"x":0.64,"y":0.5,"mock":true}
+```
+
+**真實模式（拿到硬體後）**：
+```bash
+AGENT_REAL=1 \
+C230_RTSP_URL=rtsp://user:pass@192.168.x.x:554/stream1 \
+DEEPGRAM_API_KEY=... \
+./venv/bin/python server.py
+```
+需先解開 `requirements.txt` 中註解的 `opencv-python`、`mediapipe`、`sounddevice`、`webrtcvad`、`deepgram-sdk`，並補完 `vision.py` / `audio.py` 中的 `_real_loop` / `_start_real_stt`（目前是 `NotImplementedError`）。
+
+### Phase 7：Dashboard 監控（已完成）
+
+Dashboard header 加了 agent badge（點擊查看 tooltip 詳情）：
+
+```
+○ agent passive · LLM✓ · lock=free      ← 三步驟期間
+● agent active · LLM✓ · lock=restricted ← scene 執行中且第四階段
+```
+
+更新時機：(1) `/api/agent/status` 在 WS open 時 fetch；(2) 收到 `agent:mode_changed`、`scene:vts_lock_changed`、`agent:say`、`agent:speech*` 事件即時更新。所有 `agent:*` 事件也會自動進 log panel。
+
+### 端到端煙霧測試
+
+啟動兩個服務後：
+
+```bash
+# 1. agent passive 預設、收 gaze 但 setLookAt 因 VTS 未連會 fail（OK）
+curl http://localhost:3000/api/agent/status
+
+# 2. 模擬 startListening — 在 passive 模式下 mock speech 會被忽略（這是預期）
+curl -X POST http://localhost:3000/api/devices/ai_agent/execute \
+  -H "Content-Type: application/json" -d '{"action":"startListening"}'
+
+# 3. 觸發三步驟期間的 VTS 鎖
+curl -X POST http://localhost:3000/api/scenes/play_day_3/trigger
+# 觀察 dashboard badge：lock=restricted；agent:gaze 仍可觸發 setLookAt（白名單），
+# 若 LLM 嘗試 express_emotion 會被 publish agent:action_rejected
+```
+
+要驗證**第四階段對話迴圈**，需走完三步驟讓 `visitor:ready_to_chat` 觸發 → agent 進 active → mock audio 發「你好」→ Claude tool use → say + look_at_visitor。這需要 ESP32 觸控與 YOLO 偵測配合（或用 Dashboard 手動觸發場景）。
+
 
 ## YoloTD 視覺辨識整合
 

@@ -11,7 +11,14 @@
     "maxResponseLength": 70
   },
   "llm": {
-    "model": "qwen3.5:9b",
-    "maxTokens": 150
+    "provider": "claude",
+    "maxTokens": 150,
+    "claude": {
+      "model": "claude-sonnet-4-6"
+    },
+    "ollama": {
+      "model": "qwen3.5:9b",
+      "baseURL": "http://localhost:11434"
+    }
   }
 }

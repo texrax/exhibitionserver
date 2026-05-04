@@ -3,6 +3,8 @@
 //   本地模式（預設）：直接載入裝置，單機運行
 //   雲端模式（CLOUD=1）：等待展場 Bridge 連線，透過 WebSocket 遠端代理裝置
 
+require("dotenv").config({ quiet: true });
+
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
@@ -15,7 +17,10 @@ const SceneManager = require("./core/SceneManager");
 const BridgeManager = require("./core/BridgeManager");
 const VisitorSession = require("./core/VisitorSession");
 const OllamaClient = require("./core/OllamaClient");
+const ClaudeClient = require("./core/ClaudeClient");
 const ChatManager = require("./core/ChatManager");
+const AgentController = require("./core/AgentController");
+const ClaudeAgentClient = require("./core/ClaudeAgentClient");
 const createApiRoutes = require("./routes/apiRoutes");
 const createSceneRoutes = require("./routes/sceneRoutes");
 const createChatRoutes = require("./routes/chatRoutes");
@@ -26,14 +31,38 @@ const BRIDGE_SECRET = process.env.BRIDGE_SECRET || "exhibition2026";
 const DEVICES_CONFIG = path.resolve(__dirname, "../config/devices.json");
 const SCENES_CONFIG = path.resolve(__dirname, "../config/scenes.json");
 
+function createLlmClient(llmConfig) {
+  const provider = (process.env.LLM_PROVIDER || llmConfig.provider || "claude").toLowerCase();
+
+  if (provider === "ollama") {
+    const { model, baseURL } = llmConfig.ollama || {};
+    if (!model) throw new Error("chat.json llm.ollama.model 未設定");
+    console.log(`[LLM] provider=ollama model=${model}`);
+    return new OllamaClient(model, baseURL);
+  }
+
+  if (provider === "claude") {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    const model = llmConfig.claude?.model;
+    if (!apiKey) {
+      throw new Error("ANTHROPIC_API_KEY 未設定。設環境變數，或將 chat.json llm.provider 改為 'ollama'");
+    }
+    if (!model) throw new Error("chat.json llm.claude.model 未設定");
+    console.log(`[LLM] provider=claude model=${model}`);
+    return new ClaudeClient(apiKey, model);
+  }
+
+  throw new Error(`未知的 LLM provider: ${provider}（支援 'claude' 或 'ollama'）`);
+}
+
 async function main() {
   const eventBus = new EventBus();
   const deviceManager = new DeviceManager(eventBus);
   const sceneManager = new SceneManager(eventBus, deviceManager);
   const visitorSession = new VisitorSession(eventBus);
   const chatConfig = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../config/chat.json"), "utf-8"));
-  const claudeClient = new OllamaClient(chatConfig.llm.model);
-  const chatManager = new ChatManager(eventBus, visitorSession, claudeClient);
+  const llmClient = createLlmClient(chatConfig.llm);
+  const chatManager = new ChatManager(eventBus, visitorSession, llmClient);
   let bridgeManager = null;
 
   console.log(`=== 展場中控系統啟動中 (${IS_CLOUD ? "雲端模式" : "本地模式"}) ===`);
@@ -52,6 +81,32 @@ async function main() {
   // 載入場景定義（兩種模式都需要）
   console.log("[Init] 載入場景設定...");
   sceneManager.loadFromConfig(SCENES_CONFIG);
+
+  // AI Agent 控制器 — 訂閱 visitor 與 scene:vts_lock 事件，調度 ai_agent 裝置
+  const agentConfigPath = path.resolve(__dirname, "../config/agent.json");
+  const agentConfig = fs.existsSync(agentConfigPath)
+    ? JSON.parse(fs.readFileSync(agentConfigPath, "utf-8"))
+    : {};
+  // Phase 6 LLM client — 只在 provider=claude 時建立（Ollama 不支援 tool use）
+  let claudeAgentClient = null;
+  const llmProvider = (process.env.LLM_PROVIDER || chatConfig.llm.provider || "claude").toLowerCase();
+  if (llmProvider === "claude" && process.env.ANTHROPIC_API_KEY) {
+    claudeAgentClient = new ClaudeAgentClient(process.env.ANTHROPIC_API_KEY, {
+      model: chatConfig.llm.claude?.model,
+    });
+  } else {
+    console.log(`[Init] AgentController 未注入 LLM client（provider=${llmProvider}）— 語音對話迴圈停用`);
+  }
+  const agentController = new AgentController({
+    eventBus,
+    deviceManager,
+    sceneManager,
+    visitorSession,
+    chatManager,
+    claudeAgentClient,
+    chatConfig,
+    config: agentConfig,
+  });
 
   // Express 設定
   const app = express();
@@ -82,6 +137,11 @@ async function main() {
   app.use("/api", createApiRoutes(deviceManager, eventBus));
   app.use("/api", createSceneRoutes(sceneManager));
   app.use("/api", createChatRoutes(chatManager, visitorSession));
+
+  // AgentController 狀態端點（供 Dashboard 顯示 mode / vts lock / 最近事件）
+  app.get("/api/agent/status", (req, res) => {
+    res.json(agentController.getStatus());
+  });
 
   
   // Bridge 狀態端點（雲端模式）
