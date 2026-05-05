@@ -421,18 +421,14 @@ class VTubeStudioDevice extends BaseDevice {
     const y = clamp(Number(params.y) || 0, -30, 30);
     const tilt = clamp(Number(params.headTilt) || 0, -10, 10);
 
-    // 頭部參數（覆蓋 VTS 追蹤）
+    // 頭部參數（只控制 X 軸水平轉動）
     const headParams = [
       { id: "FaceAngleX", value: x },
-      { id: "FaceAngleY", value: y },
-      { id: "FaceAngleZ", value: tilt },
     ];
-    // 眼球參數（用 add 模式疊加在 VTS 追蹤上，幅度加大）
+    // 眼球參數（只控制 X 軸水平移動）
     const eyeParams = [
-      { id: "EyeRightX", value: x / 15 },
-      { id: "EyeRightY", value: y / 15 },
       { id: "EyeLeftX", value: x / 15 },
-      { id: "EyeLeftY", value: y / 15 },
+      { id: "EyeRightX", value: x / 15 },
     ];
 
     this._lookAtTarget = { headParams, eyeParams };

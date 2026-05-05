@@ -13,7 +13,9 @@
       { "waitForEvent": "obs:mediaEnded", "timeout": 300000 },
       { "device": "obs", "action": "switchScene", "params": { "sceneName": "VTuber" } },
       { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "揮手" } },
-      { "device": "bulb_1", "action": "setTemp", "params": { "temp": 4000, "brightness": 100 } }
+      { "device": "bulb_1", "action": "setTemp", "params": { "temp": 4000, "brightness": 100 } },
+      { "delay": 1500 },
+      { "device": "audio", "action": "play", "params": { "file": "你想約幾號一起吃飯呢 去日曆前看看時間吧.WAV" } }
     ]
   },
 
@@ -157,6 +159,7 @@
       { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.3 } },
       { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "更換衣服" } },
       { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃飯手開關" } },
+      { "device": "audio", "action": "play", "params": { "file": "這個味道好熟悉喔。你可以到餐桌那邊，幫我夾一道你覺得我會喜歡的菜，放到碗裡嗎？.WAV" } },
       { "device": "spotlight_1", "action": "off", "params": {} },
       { "device": "bulb_1", "action": "off", "params": {} },
       { "device": "bulb_3", "action": "off", "params": {} },
@@ -168,24 +171,26 @@
   },
 
   "yolo_deliver_vegetable": {
-    "description": "YOLO 青菜 — 琥珀燈光 + 吃青菜動畫",
+    "description": "YOLO 青菜 — 琥珀燈光 + 吃青菜動畫 + 好吃語音",
     "trigger": { "event": "yolo_detector:deliver", "condition": { "food": "vegetables" } },
     "actions": [
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "block_wave" } },
       { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃飯手開關" } },
       { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "說話:好吃" } },
+      { "device": "audio", "action": "play", "params": { "file": "好吃.WAV" } },
       { "delay": 5000 },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } }
     ]
   },
 
   "yolo_deliver_beef": {
-    "description": "YOLO 牛肉 — 琥珀燈光 + 吃丸子動畫",
+    "description": "YOLO 牛肉 — 琥珀燈光 + 吃丸子動畫 + 家鄉味語音",
     "trigger": { "event": "yolo_detector:deliver", "condition": { "food": "beef" } },
     "actions": [
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "block_wave" } },
       { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃飯手開關" } },
       { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "說話:好吃" } },
+      { "device": "audio", "action": "play", "params": { "file": "這個味道跟家裡吃到的依樣ㄟ.WAV" } },
       { "delay": 5000 },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } }
     ]
@@ -212,7 +217,8 @@
       { "device": "esp32_main", "action": "off", "params": {} },
       { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } },
       { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "揮手" } },
-      { "delay": 1500 },
+      { "device": "audio", "action": "play", "params": { "file": "說完蛋了要來不及回去了 等等再傳訊息給你 謝謝你的午餐.WAV" } },
+      { "delay": 3000 },
       { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "待機" } },
       { "device": "spotlight_1", "action": "off", "params": {} },
       { "device": "spotlight_2", "action": "off", "params": {} },

@@ -10,8 +10,8 @@
 const ALLOWED_VTS_ACTIONS_RESTRICTED = new Set(["setLookAt", "clearLookAt"]);
 
 // scene 執行中允許的 hotkey 名單（白名單內的 triggerHotkey 才放行）
-// 揮手是迎賓動作不會干擾 scene 內部邏輯，所以開放
-const ALLOWED_HOTKEYS_RESTRICTED = new Set(["揮手"]);
+// 揮手/待機是不會干擾 scene 內部邏輯的動作
+const ALLOWED_HOTKEYS_RESTRICTED = new Set(["揮手", "待機"]);
 
 const MODE = {
   PASSIVE: "passive",
@@ -100,18 +100,54 @@ class AgentController {
     this.agentDeviceId = config.agentDeviceId || "ai_agent";
     this._gazeMinIntervalMs = config.gazeMinIntervalMs || 200;
     this._speechMinConfidence = config.speechMinConfidence ?? 0.6;
-    this._waveCooldownMs = config.waveCooldownMs || 5000;
-    this._lastWaveAt = 0;
     this._maxTokens = config.llm?.maxTokens || 400;
     this._temperature = config.llm?.temperature ?? 0.8;
 
     // emotion → VTS 動作的映射（可由 agent.json 覆寫；預設用既有 hotkey 名稱）
     this.emotionMap = config.emotionMap || {
       happy: { type: "expression", file: "開心(睜眼).exp3.json" },
+      happy_closed: { type: "expression", file: "開心(閉眼).exp3.json" },
       sad: { type: "expression", file: "哀傷.exp3.json" },
       surprised: { type: "hotkey", name: "驚訝" },
       angry: { type: "hotkey", name: "生氣" },
       neutral: { type: "removeAll" },
+    };
+
+    // ---- 手勢 cooldown（gesture type → { lastAt, ms }）----
+    const defaultCooldowns = {
+      wave: 5000, bow: 5000, raise_hand: 4000, heart: 6000,
+      approach: 8000, retreat: 8000, idle: 15000,
+      thumbs_up: 4000, victory: 4000, thumbs_down: 4000,
+      pointing_up: 4000, i_love_you: 5000,
+      face_smile: 3000, face_surprise: 3000, face_frown: 4000, face_nod: 3000,
+    };
+    const customCooldowns = config.gestures?.cooldowns || {};
+    this._gestureCooldowns = {};
+    for (const [type, ms] of Object.entries({ ...defaultCooldowns, ...customCooldowns })) {
+      this._gestureCooldowns[type] = { lastAt: 0, ms };
+    }
+
+    // 表情自動清除的 version counter（防止新舊清除衝突）
+    this._expressionVersion = 0;
+
+    // ---- 手勢 dispatch table ----
+    this._gestureHandlers = {
+      wave:          (d) => this._handleWave(d),
+      bow:           ()  => this._handleBow(),
+      raise_hand:    (d) => this._handleRaiseHand(d),
+      heart:         ()  => this._handleReflexEmotion("happy", 4000),
+      approach:      ()  => this._handleReflexEmotion("surprised", 3000),
+      retreat:       ()  => this._handleReflexEmotion("sad", 3000),
+      idle:          ()  => this._handleIdle(),
+      thumbs_up:     ()  => this._handleReflexEmotion("happy", 4000),
+      victory:       ()  => this._handleReflexEmotion("happy_closed", 4000),
+      thumbs_down:   ()  => this._handleReflexEmotion("sad", 4000),
+      pointing_up:   ()  => this._handlePointingUp(),
+      i_love_you:    ()  => this._handleReflexEmotion("happy", 4000),
+      face_smile:    ()  => this._handleReflexEmotion("happy", 3000),
+      face_surprise: ()  => this._handleReflexEmotion("surprised", 3000),
+      face_frown:    ()  => this._handleReflexEmotion("sad", 3000),
+      face_nod:      ()  => this._handleNod(),
     };
 
     this._mode = MODE.PASSIVE;
@@ -182,33 +218,140 @@ class AgentController {
   }
 
   _onGesture(data) {
+    const type = data?.type;
+    if (!type) return;
+
+    // cooldown 檢查
+    const cd = this._gestureCooldowns[type];
+    if (cd) {
+      const now = Date.now();
+      if (now - cd.lastAt < cd.ms) return;
+      cd.lastAt = now;
+    }
+
     this._lastGesture = { ...data, _at: Date.now() };
 
-    // wave gesture → 朝訪客方向 setLookAt + 觸發「揮手」hotkey（reflex，不走 LLM）
-    if (data?.type === "wave") {
-      const now = Date.now();
-      if (this._lastWaveAt && now - this._lastWaveAt < this._waveCooldownMs) {
-        return; // cooldown 內忽略，避免訪客連續揮手導致 VTuber 抽搐
-      }
-      this._lastWaveAt = now;
+    const handler = this._gestureHandlers[type];
+    if (handler) {
+      handler(data);
+    } else {
+      console.log(`[AgentController] 未知 gesture type: ${type}`);
+    }
+  }
 
-      // 把訪客手部位置（如果 vision 有給）映射到 setLookAt
-      if (typeof data.x === "number" && typeof data.y === "number") {
-        const lookX = (data.x - 0.5) * 60;
-        const lookY = (0.5 - data.y) * 60;
-        this.executeAgentAction({
-          device: "vtubestudio",
-          action: "setLookAt",
-          params: { x: lookX, y: lookY, headTilt: 0 },
-        }).catch(() => {});
-      }
+  // ==================================================
+  //  Gesture Handlers（reflex，不走 LLM）
+  // ==================================================
 
+  _handleWave(data) {
+    // 朝揮手方向看 + 觸發揮手動畫
+    if (typeof data.x === "number" && typeof data.y === "number") {
+      const lookX = (data.x - 0.5) * 60;
+      const lookY = (0.5 - data.y) * 60;
       this.executeAgentAction({
-        device: "vtubestudio",
-        action: "triggerHotkey",
-        params: { name: "揮手" },
+        device: "vtubestudio", action: "setLookAt",
+        params: { x: lookX, y: lookY, headTilt: 0 },
       }).catch(() => {});
     }
+    this.executeAgentAction({
+      device: "vtubestudio", action: "triggerHotkey",
+      params: { name: "揮手" },
+    }).catch(() => {});
+  }
+
+  _handleBow() {
+    // VTuber 低頭回禮 1.5s
+    this.executeAgentAction({
+      device: "vtubestudio", action: "setLookAt",
+      params: { x: 0, y: -15, headTilt: 0 },
+    }).catch(() => {});
+    setTimeout(() => {
+      this.executeAgentAction({
+        device: "vtubestudio", action: "clearLookAt", params: {},
+      }).catch(() => {});
+    }, 1500);
+  }
+
+  _handleRaiseHand(data) {
+    // 看向舉手方向
+    if (typeof data.x === "number") {
+      const lookX = (data.x - 0.5) * 60;
+      this.executeAgentAction({
+        device: "vtubestudio", action: "setLookAt",
+        params: { x: lookX, y: 15, headTilt: 0 },
+      }).catch(() => {});
+    }
+  }
+
+  _handleReflexEmotion(emotion, clearAfterMs) {
+    // 觸發表情，clearAfterMs 毫秒後自動清除
+    const mapping = this.emotionMap[emotion];
+    if (!mapping) return;
+
+    const version = ++this._expressionVersion;
+
+    if (mapping.type === "expression") {
+      this.executeAgentAction({
+        device: "vtubestudio", action: "setExpression",
+        params: { file: mapping.file, active: true, fadeTime: 0.3 },
+      }).catch(() => {});
+    } else if (mapping.type === "hotkey") {
+      this.executeAgentAction({
+        device: "vtubestudio", action: "triggerHotkey",
+        params: { name: mapping.name },
+      }).catch(() => {});
+    }
+
+    if (clearAfterMs > 0) {
+      setTimeout(() => {
+        // 只有在 version 沒被更新時才清除（防止新表情被舊 timer 覆蓋）
+        if (this._expressionVersion === version) {
+          this.executeAgentAction({
+            device: "vtubestudio", action: "removeAllExpressions",
+            params: { fadeTime: 0.5 },
+          }).catch(() => {});
+        }
+      }, clearAfterMs);
+    }
+  }
+
+  _handleIdle() {
+    this.executeAgentAction({
+      device: "vtubestudio", action: "triggerHotkey",
+      params: { name: "待機" },
+    }).catch(() => {});
+  }
+
+  _handlePointingUp() {
+    // VTuber 抬頭看 2s
+    this.executeAgentAction({
+      device: "vtubestudio", action: "setLookAt",
+      params: { x: 0, y: 20, headTilt: 5 },
+    }).catch(() => {});
+    setTimeout(() => {
+      this.executeAgentAction({
+        device: "vtubestudio", action: "clearLookAt", params: {},
+      }).catch(() => {});
+    }, 2000);
+  }
+
+  _handleNod() {
+    // VTuber 點頭回應（Y 軸快速上下）
+    this.executeAgentAction({
+      device: "vtubestudio", action: "setLookAt",
+      params: { x: 0, y: -8, headTilt: 0 },
+    }).catch(() => {});
+    setTimeout(() => {
+      this.executeAgentAction({
+        device: "vtubestudio", action: "setLookAt",
+        params: { x: 0, y: 5, headTilt: 0 },
+      }).catch(() => {});
+    }, 300);
+    setTimeout(() => {
+      this.executeAgentAction({
+        device: "vtubestudio", action: "clearLookAt", params: {},
+      }).catch(() => {});
+    }, 600);
   }
 
   async _onSpeech({ text, confidence } = {}) {

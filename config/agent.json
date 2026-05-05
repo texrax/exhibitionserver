@@ -5,6 +5,28 @@
 
   "_comment": "三步驟期間 (scene:vts_lock_changed.mode === 'restricted') AgentController 對 vtubestudio 只允許白名單動作。白名單寫死在 src/core/AgentController.js — ALLOWED_VTS_ACTIONS_RESTRICTED",
 
+  "gestures": {
+    "_comment": "可覆寫個別手勢 cooldown（毫秒），未列出的用程式內建預設值",
+    "cooldowns": {
+      "wave": 5000,
+      "bow": 5000,
+      "raise_hand": 4000,
+      "heart": 6000,
+      "approach": 8000,
+      "retreat": 8000,
+      "idle": 15000,
+      "thumbs_up": 4000,
+      "victory": 4000,
+      "thumbs_down": 4000,
+      "pointing_up": 4000,
+      "i_love_you": 5000,
+      "face_smile": 3000,
+      "face_surprise": 3000,
+      "face_frown": 4000,
+      "face_nod": 3000
+    }
+  },
+
   "llm": {
     "_comment": "Phase 6 才會用：Claude tool use 設定。temperature 略高讓回應自然",
     "temperature": 0.8,
