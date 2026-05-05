@@ -421,18 +421,23 @@ class VTubeStudioDevice extends BaseDevice {
     const y = clamp(Number(params.y) || 0, -30, 30);
     const tilt = clamp(Number(params.headTilt) || 0, -10, 10);
 
-    const parameterValues = [
+    // 頭部參數（覆蓋 VTS 追蹤）
+    const headParams = [
       { id: "FaceAngleX", value: x },
       { id: "FaceAngleY", value: y },
       { id: "FaceAngleZ", value: tilt },
-      { id: "EyeRightX", value: x / 30 },
-      { id: "EyeRightY", value: y / 30 },
-      { id: "EyeLeftX", value: x / 30 },
-      { id: "EyeLeftY", value: y / 30 },
+    ];
+    // 眼球參數（用 add 模式疊加在 VTS 追蹤上，幅度加大）
+    const eyeParams = [
+      { id: "EyeRightX", value: x / 15 },
+      { id: "EyeRightY", value: y / 15 },
+      { id: "EyeLeftX", value: x / 15 },
+      { id: "EyeLeftY", value: y / 15 },
     ];
 
-    this._lookAtTarget = parameterValues;
-    await this._injectParameter(parameterValues, true, "set");
+    this._lookAtTarget = { headParams, eyeParams };
+    await this._injectParameter(headParams, true, "set");
+    await this._injectParameter(eyeParams, true, "add");
     this._startLookAtKeepalive();
 
     this.eventBus.publish(`${this.id}:lookAtChanged`, { x, y, headTilt: tilt });
@@ -449,8 +454,11 @@ class VTubeStudioDevice extends BaseDevice {
     if (this._lookAtKeepaliveTimer) return;
     this._lookAtKeepaliveTimer = setInterval(() => {
       if (!this._authenticated || !this._lookAtTarget || !this._ws || this._ws.readyState !== WebSocket.OPEN) return;
-      this._injectParameter(this._lookAtTarget, true, "set").catch((err) => {
+      this._injectParameter(this._lookAtTarget.headParams, true, "set").catch((err) => {
         console.error(`[${this.id}] LookAt keepalive 失敗: ${err.message}`);
+      });
+      this._injectParameter(this._lookAtTarget.eyeParams, true, "add").catch((err) => {
+        console.error(`[${this.id}] LookAt eye keepalive 失敗: ${err.message}`);
       });
     }, this._lookAtIntervalMs);
   }

@@ -5,6 +5,9 @@ const { spawn } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
+// 載入 .env 讓 Python agent 也能拿到環境變數
+require("dotenv").config({ path: path.resolve(__dirname, "..", ".env") });
+
 const root = path.resolve(__dirname, "..");
 
 // ---- Python agent（如 agent/venv 已建立則自動跑） ----
