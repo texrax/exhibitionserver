@@ -7,7 +7,7 @@ const BaseDevice = require("./BaseDevice");
 class ESP32Device extends BaseDevice {
   constructor(id, config, eventBus) {
     super(id, config, eventBus);
-    this.baseUrl = `http://${config.ip || "192.168.31.101"}`;
+    this.baseUrl = `http://${config.ip || "192.168.99.101"}`;
 
     // 💡 修正 1：將預設 Timeout 從 200ms 提高到 3000ms (3秒)
     // 展場環境 WiFi 較不穩，給予足夠時間讓指令送達
@@ -23,8 +23,11 @@ class ESP32Device extends BaseDevice {
 
   async init() {
     try {
-      // 初始化時嘗試握手，確認設備在線
-      await axios.get(`${this.baseUrl}/`, { timeout: 2000 });
+      // 韌體只註冊 /light/mode，沒有根路徑 handler；用 validateStatus 把 404 也視為 reachable
+      await axios.get(`${this.baseUrl}/`, {
+        timeout: 2000,
+        validateStatus: () => true,
+      });
       this._setStatus("online");
       console.log(`[${this.id}] ✅ ESP32 連線成功 (${this.baseUrl})`);
     } catch (err) {

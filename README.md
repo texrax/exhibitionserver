@@ -509,8 +509,8 @@ cd yolo && python3 -m venv venv && ./venv/bin/pip install -r requirements.txt
 const char* ssid = "table";        
 const char* password = "00000000"; 
 
-// 💡 筆電 IP：請務必確認 ipconfig 查到的是 31.21
-const String serverURL = "http://192.168.31.47:3000"; 
+// 💡 筆電 IP：請務必確認 ipconfig 查到的位址
+const String serverURL = "http://192.168.99.47:3000"; 
 
 // ==========================================
 // 2. 🌈 燈條與感測器設定
