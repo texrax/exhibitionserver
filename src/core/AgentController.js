@@ -10,9 +10,10 @@
 const ALLOWED_VTS_ACTIONS_RESTRICTED = new Set(["setLookAt", "clearLookAt"]);
 
 // scene 執行中允許的 hotkey 名單（白名單內的 triggerHotkey 才放行）
-// 揮手/待機 + Ver7 短動畫（< 3s 不會干擾 scene 內部邏輯）
+// 揮手 + Ver7 短動畫（< 3s 不會干擾 scene 內部邏輯）
+// 注意：「待機」hotkey 在當前 VTS 模型對映到「不吃_嘴巴講話」motion，已從白名單移除
 const ALLOWED_HOTKEYS_RESTRICTED = new Set([
-  "揮手", "待機",
+  "揮手",
   "前傾", "點頭動畫", "指向上方", "歪頭好奇",
 ]);
 
@@ -107,7 +108,7 @@ class AgentController {
     this._temperature = config.llm?.temperature ?? 0.8;
 
     // emotion → VTS 動作的映射（可由 agent.json 覆寫；預設用既有 hotkey 名稱）
-    // Ver7 新增：shy / proud / pouty / sleepy / deadpan / wink
+    // Ver7 新增：shy / proud / pouty / deadpan / wink
     this.emotionMap = config.emotionMap || {
       happy: { type: "expression", file: "開心(睜眼).exp3.json" },
       happy_closed: { type: "expression", file: "開心(閉眼).exp3.json" },
@@ -117,7 +118,6 @@ class AgentController {
       shy: { type: "expression", file: "shy.exp3.json" },
       proud: { type: "expression", file: "proud.exp3.json" },
       pouty: { type: "expression", file: "pouty.exp3.json" },
-      sleepy: { type: "expression", file: "sleepy.exp3.json" },
       deadpan: { type: "expression", file: "deadpan.exp3.json" },
       wink: { type: "expression", file: "wink-left.exp3.json" },
       neutral: { type: "removeAll" },
@@ -147,7 +147,7 @@ class AgentController {
       raise_hand:    (d) => this._handleRaiseHand(d),
       heart:         ()  => this._handleReflexEmotion("proud", 4000),
       approach:      ()  => this._handleReflexEmotion("shy", 3000),
-      retreat:       ()  => this._handleReflexEmotion("sleepy", 3000),
+      retreat:       ()  => this._handleReflexEmotion("sad", 3000),
       idle:          ()  => this._handleIdle(),
       thumbs_up:     ()  => this._handleReflexEmotion("proud", 4000),
       victory:       ()  => this._handleReflexEmotion("wink", 4000),
@@ -164,6 +164,10 @@ class AgentController {
     this._vtsLockMode = sceneManager.getVtsLockMode();
     this._lastGazeAt = 0;
     this._lastGesture = null;
+
+    // 第二環節（餐桌互動）期間靜音 vision 觸發的表情/手勢
+    // 由 after_day_selection 開啟、end_interaction / start / all_off 解除
+    this._visionMuted = false;
 
     // 對話歷史 — 與 ChatManager 的 APP 文字聊天分開
     this._history = [];
@@ -186,9 +190,57 @@ class AgentController {
       this._vtsLockMode = mode;
     });
 
+    // Vision 靜音控制：從第一環節（start）進入互動就靜音，
+    // 直到 end_interaction 結束（進入第四階段聊天）才解除
+    this.eventBus.on("scene:started", ({ scene }) => {
+      if (scene === "start") {
+        this._setVisionMuted(true, "phase1_start");
+      } else if (scene === "after_day_selection") {
+        this._setVisionMuted(true, "phase2_eating");
+      } else if (scene === "all_off") {
+        this._setVisionMuted(false, "all_off");
+      }
+    });
+    this.eventBus.on("scene:finished", ({ scene }) => {
+      if (scene === "end_interaction") {
+        this._setVisionMuted(false, "end_interaction");
+      }
+    });
+
     this.eventBus.on("agent:speech", (data) => this._onSpeech(data));
     this.eventBus.on("agent:gesture", (data) => this._onGesture(data));
     this.eventBus.on("agent:gaze", (data) => this._onGaze(data));
+
+    // Python agent 重新連線時自動同步當前 vision 狀態，避免重連後 pause 失效
+    this.eventBus.on(`${this.agentDeviceId}:status`, ({ status }) => {
+      if (status === "online") {
+        this._syncVisionStateToPython("agent_reconnected");
+      }
+    });
+  }
+
+  _setVisionMuted(muted, reason = "") {
+    const stateChanged = this._visionMuted !== muted;
+    this._visionMuted = muted;
+    if (stateChanged) {
+      console.log(`[AgentController] vision muted: ${muted} (${reason})`);
+      this.eventBus.publish("agent:vision_muted_changed", { muted, reason });
+    }
+
+    // 不論 state 有沒有變都重送命令 — 避免 Python agent 重連時狀態遺失
+    this._syncVisionStateToPython(reason);
+  }
+
+  _syncVisionStateToPython(reason = "sync") {
+    const cmd = this._visionMuted ? "pauseVision" : "resumeVision";
+    this.deviceManager
+      .executeOnDevice(this.agentDeviceId, cmd, {})
+      .then(() => {
+        console.log(`[AgentController] → Python agent ${cmd} (${reason})`);
+      })
+      .catch((err) => {
+        console.log(`[AgentController] 通知 Python agent ${cmd} 失敗（可能未連線）: ${err.message}`);
+      });
   }
 
   _setMode(newMode) {
@@ -211,6 +263,7 @@ class AgentController {
   // ==================================================
 
   _onGaze({ x, y } = {}) {
+    if (this._visionMuted) return;
     if (typeof x !== "number" || typeof y !== "number") return;
 
     const now = Date.now();
@@ -228,6 +281,7 @@ class AgentController {
   }
 
   _onGesture(data) {
+    if (this._visionMuted) return;
     const type = data?.type;
     if (!type) return;
 
@@ -325,10 +379,8 @@ class AgentController {
   }
 
   _handleIdle() {
-    this.executeAgentAction({
-      device: "vtubestudio", action: "triggerHotkey",
-      params: { name: "待機" },
-    }).catch(() => {});
+    // VTS 模型的「待機」hotkey 目前對映到「不吃_嘴巴講話」motion，
+    // 觸發只會出現拒食動畫，因此 idle gesture 暫不觸發任何 hotkey。
   }
 
   _handlePointingUp() {
@@ -548,6 +600,7 @@ class AgentController {
     return {
       mode: this._mode,
       vtsLockMode: this._vtsLockMode,
+      visionMuted: this._visionMuted,
       llmReady: !!this.claudeAgentClient,
       historyTurns: Math.floor(this._history.length / 2),
       turnInFlight: this._turnInFlight,

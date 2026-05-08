@@ -142,6 +142,34 @@ class VisitorSession {
   }
 
   /**
+   * 強制把 session 推進 READY_TO_CHAT 狀態，不重新 fire visitor:day_completed
+   * （用於控制台「結束互動」按鈕，避免重新觸發 after_day_selection 場景）
+   */
+  forceReadyToChat({ day = 3, food = "vegetable" } = {}) {
+    if (this.state === STATE.CHATTING) {
+      console.log("[VisitorSession] forceReadyToChat: 已在聊天中，略過");
+      return;
+    }
+
+    if (!this.dayHistory.includes(day)) {
+      this.dayHistory.push(day);
+      this.dayAttempts++;
+    }
+    this.lastDay = this.lastDay ?? day;
+    if (!this.foodsDelivered.includes(food)) {
+      this.foodsDelivered.push(food);
+    }
+
+    if (this.state !== STATE.READY_TO_CHAT) {
+      this.state = STATE.READY_TO_CHAT;
+      console.log("[VisitorSession] ✅ forceReadyToChat → 進入 READY_TO_CHAT");
+      this.eventBus.publish("visitor:ready_to_chat", this.getInteractionSummary());
+    } else {
+      console.log("[VisitorSession] forceReadyToChat: 已在 READY_TO_CHAT，僅補資料");
+    }
+  }
+
+  /**
    * 重置 session，準備接待下一位訪客
    */
   reset() {

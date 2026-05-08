@@ -4,7 +4,6 @@
     "actions": [
       { "device": "yolo_detector", "action": "stop", "params": {} },
       { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.3 } },
-      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "待機" } },
       { "device": "wizlight_all", "action": "off", "params": {} },
       { "device": "esp32_main", "action": "off", "params": {} },
       { "delay": 500 },
@@ -165,8 +164,7 @@
       { "device": "bulb_3", "action": "off", "params": {} },
       { "device": "esp32_main", "action": "off", "params": {} },
       { "device": "bulb_2", "action": "setTemp", "params": { "temp": 4000, "brightness": 100 } },
-      { "device": "spotlight_2", "action": "setTemp", "params": { "temp": 4000, "brightness": 100 } },
-      { "device": "yolo_detector", "action": "start", "params": {} }
+      { "device": "spotlight_2", "action": "setTemp", "params": { "temp": 4000, "brightness": 100 } }
     ]
   },
 
@@ -175,8 +173,7 @@
     "trigger": { "event": "yolo_detector:deliver", "condition": { "food": "vegetables" } },
     "actions": [
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "block_wave" } },
-      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃飯手開關" } },
-      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "說話:好吃" } },
+      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃青菜" } },
       { "device": "audio", "action": "play", "params": { "file": "好吃.WAV" } },
       { "delay": 5000 },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } }
@@ -188,8 +185,7 @@
     "trigger": { "event": "yolo_detector:deliver", "condition": { "food": "beef" } },
     "actions": [
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "block_wave" } },
-      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃飯手開關" } },
-      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "說話:好吃" } },
+      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "吃完子" } },
       { "device": "audio", "action": "play", "params": { "file": "這個味道跟家裡吃到的依樣ㄟ.WAV" } },
       { "delay": 5000 },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "standby" } }
@@ -202,7 +198,7 @@
       { "device": "bulb_2", "action": "setColor", "params": { "r": 255, "g": 0, "b": 0, "brightness": 100 } },
       { "device": "spotlight_2", "action": "setColor", "params": { "r": 255, "g": 0, "b": 0, "brightness": 100 } },
       { "device": "esp32_main", "action": "setMode", "params": { "mode": "blink" } },
-      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "說話:不要吃" } },
+      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "不吃" } },
       { "delay": 5000 },
       { "device": "bulb_2", "action": "setTemp", "params": { "temp": 4000, "brightness": 100 } },
       { "device": "spotlight_2", "action": "setTemp", "params": { "temp": 4000, "brightness": 100 } },
@@ -216,10 +212,8 @@
       { "device": "yolo_detector", "action": "stop", "params": {} },
       { "device": "esp32_main", "action": "off", "params": {} },
       { "device": "vtubestudio", "action": "removeAllExpressions", "params": { "fadeTime": 0.5 } },
-      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "揮手" } },
       { "device": "audio", "action": "play", "params": { "file": "說完蛋了要來不及回去了 等等再傳訊息給你 謝謝你的午餐.WAV" } },
       { "delay": 3000 },
-      { "device": "vtubestudio", "action": "triggerHotkey", "params": { "name": "待機" } },
       { "device": "spotlight_1", "action": "off", "params": {} },
       { "device": "spotlight_2", "action": "off", "params": {} },
       { "device": "bulb_1", "action": "off", "params": {} },

@@ -40,6 +40,10 @@ class VisionModule:
         self.fps = float(os.environ.get("VISION_FPS", "5"))
         self._show_preview = os.environ.get("VISION_SHOW", "1") == "1"
 
+        # 暫停旗標 — 為 True 時主迴圈不抓 frame、不跑偵測、不發事件
+        # 由 Node.js 端透過 pauseVision / resumeVision command 控制
+        self._paused = False
+
         # ---- 通用 cooldown（gesture type → last fire time）----
         self._last_gesture_time: dict = {}
         self._gesture_cooldowns: dict = {
@@ -113,17 +117,19 @@ class VisionModule:
         asyncio.create_task(self._mock_wave_loop())
         t = 0
         while True:
-            x = 0.5 + 0.3 * math.sin(t * 0.5)
-            await self.server.publish("gaze", {"x": x, "y": 0.5, "mock": True})
+            if not self._paused:
+                x = 0.5 + 0.3 * math.sin(t * 0.5)
+                await self.server.publish("gaze", {"x": x, "y": 0.5, "mock": True})
             t += 1
             await asyncio.sleep(5)
 
     async def _mock_wave_loop(self) -> None:
         await asyncio.sleep(20)
         while True:
-            await self.server.publish("gesture", {
-                "type": "wave", "x": 0.6, "y": 0.3, "side": "right", "mock": True,
-            })
+            if not self._paused:
+                await self.server.publish("gesture", {
+                    "type": "wave", "x": 0.6, "y": 0.3, "side": "right", "mock": True,
+                })
             await asyncio.sleep(30)
 
     # ==================================================
@@ -229,6 +235,10 @@ class VisionModule:
 
             def _grab_loop():
                 while self._grab_running:
+                    # 暫停時不從 RTSP 拉 frame（網路 I/O 也停）
+                    if self._paused:
+                        time.sleep(0.3)
+                        continue
                     ok, frame = cap.read()
                     if ok:
                         with self._frame_lock:
@@ -240,6 +250,11 @@ class VisionModule:
 
         try:
             while True:
+                # 暫停時不抓 frame、不跑偵測（CPU/GPU 幾乎閒置）
+                if self._paused:
+                    await asyncio.sleep(0.2)
+                    continue
+
                 if is_rtsp:
                     with self._frame_lock:
                         frame = self._latest_frame
@@ -636,4 +651,11 @@ class VisionModule:
     # ==================================================
 
     async def on_command(self, command: str, params: dict) -> None:
-        return
+        if command in ("pauseVision", "pause_vision"):
+            if not self._paused:
+                self._paused = True
+                print("[vision] ⏸  已暫停（不抓 frame / 不偵測）")
+        elif command in ("resumeVision", "resume_vision"):
+            if self._paused:
+                self._paused = False
+                print("[vision] ▶  已恢復偵測")

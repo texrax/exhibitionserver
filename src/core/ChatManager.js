@@ -338,7 +338,7 @@ class ChatManager {
    */
   _notifyAppInteractionsComplete() {
     if (!this._appWs || this._appWs.readyState !== 1) {
-      console.log("[ChatManager] App 未連線，暫存互動完成通知");
+      console.log("[ChatManager] ⚠️  App 未連線（_appWs=" + (this._appWs ? "存在但 readyState=" + this._appWs.readyState : "null") + "），無法傳送 interactions_complete");
       return;
     }
 
@@ -358,7 +358,25 @@ class ChatManager {
       payload,
     });
 
-    console.log("[ChatManager] 已通知 App 互動完成", payload.firstMessage ? "(含開場白)" : "(無開場白)");
+    console.log("[ChatManager] ✅ 已通知 App 互動完成", payload.firstMessage ? "(含開場白)" : "(無開場白)");
+  }
+
+  /**
+   * 強制重新通知 App 互動完成（debug / 救援用）
+   * - 若已預生成則立即送出
+   * - 否則啟動預生成（完成後會自動 notify）
+   * - 不檢查 visitor session 狀態，呼叫者保證該推
+   */
+  forceNotify() {
+    if (this._pregeneratedGreeting) {
+      console.log("[ChatManager] forceNotify: 預生成已存在，立即推送");
+      this._notifyAppInteractionsComplete();
+    } else if (this._greetingPromise) {
+      console.log("[ChatManager] forceNotify: 預生成進行中，完成後會自動推送");
+    } else {
+      console.log("[ChatManager] forceNotify: 啟動預生成 + 推送");
+      this._pregenerateGreetingThenNotify();
+    }
   }
 
   /**

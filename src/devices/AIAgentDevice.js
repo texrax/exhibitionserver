@@ -29,6 +29,8 @@ class AIAgentDevice extends BaseDevice {
       case "startListening":
       case "stopListening":
       case "setMode":
+      case "pauseVision":
+      case "resumeVision":
         return this._sendCommand(action, params);
       case "getStatus":
         return this.getStatus();
@@ -42,6 +44,8 @@ class AIAgentDevice extends BaseDevice {
       { action: "startListening", params: {}, description: "啟用 USB mic STT 監聽（第四階段使用）" },
       { action: "stopListening", params: {}, description: "停止 STT 監聽" },
       { action: "setMode", params: { mode: "string" }, description: "切換 agent 模式: idle | passive | active" },
+      { action: "pauseVision", params: {}, description: "暫停 C230 視覺偵測（不抓 frame / 不跑 mediapipe）" },
+      { action: "resumeVision", params: {}, description: "恢復 C230 視覺偵測" },
     ];
   }
 
