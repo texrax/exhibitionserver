@@ -196,23 +196,14 @@ class VisionModule:
         print(f"[vision] 開啟攝影機: {source}")
 
         if isinstance(source, str) and source.startswith("rtsp"):
-            # RTSP 極低延遲：UDP 傳輸 + 零緩衝 + 跳過探測
+            # RTSP 低延遲：TCP 傳輸 + 最小緩衝
             os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = (
-                "rtsp_transport;udp"
-                "|fflags;nobuffer+fastseek+flush_packets"
+                "rtsp_transport;tcp"
+                "|fflags;nobuffer"
                 "|flags;low_delay"
-                "|max_delay;0"
-                "|framedrop;1"
-                "|analyzeduration;0"
-                "|probesize;500000"
-                "|reorder_queue_size;0"
-                "|stimeout;2000000"
             )
             cap = cv2.VideoCapture(source, cv2.CAP_FFMPEG)
-            cap.set(cv2.CAP_PROP_BUFFERSIZE, 0)
-            # 降解析度加速解碼
-            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
-            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 240)
+            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         else:
             cap = cv2.VideoCapture(source)
 

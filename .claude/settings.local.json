@@ -6,7 +6,8 @@
       "Bash(curl -sL -o D:/gitit/exhibitionserver/agent/gesture_recognizer.task \"https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/latest/gesture_recognizer.task\")",
       "Read(//c/Users/31493/Downloads/蘇菲_vts_Ver7/**)",
       "Bash(powershell -Command \"Get-ChildItem -Recurse | Format-Table -Property FullName, PSIsContainer\")",
-      "Bash(D:/gitit/exhibitionserver/agent/venv/Scripts/python.exe *)"
+      "Bash(D:/gitit/exhibitionserver/agent/venv/Scripts/python.exe *)",
+      "Bash(npm start *)"
     ]
   }
 }
